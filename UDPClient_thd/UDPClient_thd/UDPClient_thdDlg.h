@@ -15,6 +15,24 @@ struct ThreadArg //스레드 정의
 	int Thread_run; //스레드 제어 변수
 };
 
+struct UDP_datagram { // 보낼 패킷을 구성
+	//UDP 헤더
+	short checksum = 0; //checksum_field 체크섬필드는 처음엔 0
+
+	short source_port;
+	short destination_port;
+
+	short length;
+	int seq;
+
+	int source_ip;//32bit
+	int destination_ip;//32bit
+	
+	//Data
+	CString data; //16byte짜리 데이터
+};
+
+
 // CUDPClient_thdDlg 대화 상자
 class CUDPClient_thdDlg : public CDialogEx
 {

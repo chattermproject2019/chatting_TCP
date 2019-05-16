@@ -55,6 +55,7 @@ END_MESSAGE_MAP()
 
 CUDPServer_thdDlg::CUDPServer_thdDlg(CWnd* pParent /*=NULL*/)
 	: CDialogEx(IDD_UDPSERVER_THD_DIALOG, pParent)
+	, m_edit1_text(_T(""))
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 }
@@ -65,6 +66,10 @@ void CUDPServer_thdDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_EDIT1, m_tx_edit_short);
 	DDX_Control(pDX, IDC_EDIT3, m_tx_edit);
 	DDX_Control(pDX, IDC_EDIT2, m_rx_edit);
+
+	DDX_Text(pDX, IDC_EDIT1, m_edit1_text); // 입력창의 값을 받아옵니다.
+	DDV_MaxChars(pDX, m_edit1_text, 512);// 한글(2byte)이든 영어,문자(1byte)든 512자 입력가능합니다. (=최대 1024byte 가능)
+
 }
 
 BEGIN_MESSAGE_MAP(CUDPServer_thdDlg, CDialogEx)

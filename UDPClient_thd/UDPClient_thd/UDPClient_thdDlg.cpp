@@ -80,7 +80,7 @@ END_MESSAGE_MAP()
 
 // CUDPClient_thdDlg 메시지 처리기
 
-UINT RXThread(LPVOID arg) //RXThread 함수 정의
+UINT RXThread(LPVOID arg) //Receive
 {
 	ThreadArg *pArg = (ThreadArg *)arg;
 	CStringList *plist = pArg->pList;
@@ -110,7 +110,7 @@ UINT RXThread(LPVOID arg) //RXThread 함수 정의
 	return 0;
 }
 
-UINT TXThread(LPVOID arg) //TXThread 함수 정의
+UINT TXThread(LPVOID arg) //Send
 {
 	ThreadArg *pArg = (ThreadArg *)arg;
 	CStringList *plist = pArg->pList;
@@ -133,6 +133,9 @@ UINT TXThread(LPVOID arg) //TXThread 함수 정의
 
 			pDlg->m_tx_edit.SetWindowTextW(message);
 			pDlg->m_ipaddr.GetWindowTextW(pDlg->HostAddress); /// 창에서 ip주소를 가지고 옵니다.
+
+
+
 			pDlg->m_pDataSocket->SendToEx(str, (str.GetLength() + 1) * sizeof(TCHAR), pDlg->HostPort, pDlg->HostAddress, 0);
 			pDlg->m_tx_edit.LineScroll(pDlg->m_tx_edit.GetLineCount());
 

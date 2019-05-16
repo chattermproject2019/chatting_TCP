@@ -52,4 +52,5 @@ public:
 	CDataSocket *m_pDataSocket;
 	void ProcessReceive(CDataSocket* pSocket, int nErrorCode);
 	afx_msg void OnBnClickedDisconnect();
+	CString m_edit1_text; // DDV로 메세지 길이 제한할녀석
 };

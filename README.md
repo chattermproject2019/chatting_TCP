@@ -1,4 +1,4 @@
-# chatting_TCP
+# chatting_MFC
 UDP [x]
 
 

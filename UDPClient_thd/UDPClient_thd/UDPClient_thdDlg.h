@@ -8,30 +8,19 @@
 
 class CDataSocket;
 
+struct Packet { // 16byte = 128bit
+	unsigned short seq; // 2yte = 16bit
+	unsigned short checksum; // 2byte = 16bit
+	unsigned short total_sequence_number; // 2byte = 16bit => 총 보내는 frame수
+	unsigned char data[10]; // 10btye = 80bit, 순수 데이터만 80bit = 10byte저장가능
+	Packet() { seq = 1; checksum = 0; total_sequence_number = 0; memset(data, 0, sizeof(data)); }
+};
 struct ThreadArg //스레드 정의
 {
 	CStringList* pList;
 	CDialogEx* pDlg;
 	int Thread_run; //스레드 제어 변수
 };
-
-struct UDP_datagram { // 보낼 패킷을 구성
-	//UDP 헤더
-	short checksum = 0; //checksum_field 체크섬필드는 처음엔 0
-
-	short source_port;
-	short destination_port;
-
-	short length;
-	int seq;
-
-	int source_ip;//32bit
-	int destination_ip;//32bit
-	
-	//Data
-	CString data; //16byte짜리 데이터
-};
-
 
 // CUDPClient_thdDlg 대화 상자
 class CUDPClient_thdDlg : public CDialogEx
@@ -66,11 +55,17 @@ public:
 	CEdit m_tx_edit_short;
 	CEdit m_tx_edit;
 	CEdit m_rx_edit;
-	CIPAddressCtrl m_ip_addr;
 	afx_msg void OnBnClickedSend();
 	afx_msg void OnBnClickedClose();
 	void ProcessReceive(CDataSocket* pSocket, int nErrorCode);
+
 	CIPAddressCtrl m_ipaddr;
-	CString HostAddress; //전송할 ip를 저장합니다.
-	UINT HostPort = 6789; // 서버의 port주소입니다.
+	CString myIp;
+	int myPort;
+	CString peerIp;
+	int peerPort;
+	CArray<Packet> packet_send_buffer; // 보낼 패킷을 저장해 놓는 버퍼
+	CArray<Packet> packet_receive_buffer; // 받은 패킷을 저장해 놓는 버퍼
+
+	void packetSegmentation(CString);
 };

@@ -1,9 +1,9 @@
 ﻿  UDPClient_thdDlg.cpp
-  코드를 생성하고 있습니다...
-  컴파일하고 있습니다...
-  UDPClient_thd.cpp
-  코드를 생성하고 있습니다...
-  건너뛰고 있습니다... (관련된 변경 내용 없음)
-  DataSocket.cpp
-  UDPClient_thd.vcxproj -> E:\UDPClient_thd\Debug\UDPClient_thd.exe
-  UDPClient_thd.vcxproj -> E:\UDPClient_thd\Debug\UDPClient_thd.pdb (Partial PDB)
+e:\udpsegmentation\udpclient_thd\udpclient_thd\udpclient_thddlg.cpp(139): warning C4267: '=': 'size_t'에서 'unsigned short'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+e:\udpsegmentation\udpclient_thd\udpclient_thd\udpclient_thddlg.cpp(142): warning C4267: '=': 'size_t'에서 'unsigned short'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+e:\udpsegmentation\udpclient_thd\udpclient_thd\udpclient_thddlg.cpp(148): warning C4018: '<': signed 또는 unsigned가 일치하지 않습니다.
+e:\udpsegmentation\udpclient_thd\udpclient_thd\udpclient_thddlg.cpp(152): warning C4244: '=': 'unsigned long'에서 'unsigned char'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+e:\udpsegmentation\udpclient_thd\udpclient_thd\udpclient_thddlg.cpp(167): warning C4244: '=': 'unsigned long'에서 'unsigned char'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+stdafx.obj : warning LNK4258: '/entry:WinMainCRTStartup' 지시문은 '/ENTRY:wWinMainCRTStartup' 스위치와 호환되지 않습니다. 무시됩니다.
+  UDPClient_thd.vcxproj -> E:\UDPsegmentation\UDPClient_thd\Debug\UDPClient_thd.exe
+  UDPClient_thd.vcxproj -> E:\UDPsegmentation\UDPClient_thd\Debug\UDPClient_thd.pdb (Partial PDB)

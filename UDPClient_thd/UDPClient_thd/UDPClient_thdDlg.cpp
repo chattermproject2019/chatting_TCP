@@ -8,13 +8,19 @@
 #include "afxdialogex.h"
 #include "DataSocket.h"
 
+#include <algorithm>
+#include <bitset>
+#include <iostream>
+#include <sstream>
+#include <string>
+using namespace std;
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
 CCriticalSection tx_cs;
 CCriticalSection rx_cs;
-//#define ip "127.0.0.1" //ip  지정
+
 
 
 // 응용 프로그램 정보에 사용되는 CAboutDlg 대화 상자입니다.
@@ -78,28 +84,127 @@ BEGIN_MESSAGE_MAP(CUDPClient_thdDlg, CDialogEx)
 END_MESSAGE_MAP()
 
 
+std::string CString_to_BinaryStr(CString message) { // CString 으로 반환하면 hex로 되어서 연산까다로움
+	
+	std::string temp = CT2CA(message); // CString to string
+	char *ptr = (char*)temp.c_str();//"GFG";
+
+	std::string temp2 = "";
+
+	int i;
+	for (; *ptr != 0; ++ptr)
+	{
+		//printf("%c => ", *ptr);
+		for (i = 7; i >= 0; --i) // 8bit
+			temp2 += (*ptr & 1 << i) ? ("1") : ("0");//putchar('1') : putchar('0');
+		//putchar('\n');
+	}
+	//std::cout<<"이진화된 문자는" << temp2 << "입니다.\n\n";
+	
+	return temp2;
+}
+
+std::string BinaryStr_to_CString(std::string binary_message) {
+	//CString res = _T("");
+	//std::string line = CT2CA(binary_message);
+	//std::cout << "Enter binary string: ";
+	std::string line = binary_message;
+	std::string temp = "";
+	bool correct = false;
+	while (!correct) {
+		//std::getline(std::cin, line);
+		correct = std::all_of(line.begin(), line.end(), [](char c){return c =='1'||c=='0';});
+		if (!correct)
+			return ("");
+		//	std::cout << "error, print only 1's or 0's: ";
+	}
+	std::istringstream in(line);
+	std::bitset<8> bs; // 8bit
+	while (in >> bs)
+		//std::cout << char(bs.to_ulong());
+		temp += char(bs.to_ulong());
+	return temp;
+}
+
+void CUDPClient_thdDlg::packetSegmentation(CString message) {
+
+	std::string binaried = CString_to_BinaryStr(message); // 문자열을 2진수문자열로만듦니다. 길이는 1문자를 8bit씩 나눕니다.
+	// 각 문자를 8bit크기로 이진화하였으므로, Packet의 data에는 80bit즉 10개의 문자를 저장하여 보낼 수 있습니다.
+	std::wcout<<"보내시려는 메세지 :" << (const wchar_t*)message << " 는 \n"; //CString은 wcout으로 출력해야 16진수로 안나옴
+	std::cout << "이진수로 " << binaried << "입니다\n";
+	std::string temp = "";
+
+	unsigned short total_packet;
+	if (binaried.length() % 80 == 0) {
+		total_packet = binaried.length() / 80;
+	}
+	else {
+		total_packet = (binaried.length() / 80) + 1;
+	}
+
+	Packet newPacket = Packet();
+	int packet_data_count = 0;
+	int seq = 0;
+	for (int i = 0; i < binaried.length(); ++i) {
+		temp += binaried.at(i); // 1bit씩 추가.
+		if (temp.length() == 8) { // 8번째마다 8bit이므로 1byte에 저장가능
+			std::bitset<8> bits(temp); // ex) "10101010" => 숫자 170 == 0b10101010
+			newPacket.data[packet_data_count % 10] = bits.to_ulong(); //data[0]~data[9]에 대해서 8bit(1byte)씩 숫자로 저장
+			packet_data_count++;
+			temp = "";
+			if (packet_data_count == 10) { // 매번 80번째 bit를 추가할때마다 이때까지 저장한 packet을 packet buffer에 저장합니다.
+				newPacket.seq = ++seq; // seq넘버도 추가
+				newPacket.total_sequence_number = total_packet; // 문자열 이진화한거를 80bit로 나누면 총 보낼 frame개수나옴
+				packet_send_buffer.Add(newPacket); //버퍼에 패킷 추가
+				newPacket = Packet(); // 새 패킷할당
+				packet_data_count = 0;
+			}
+		}
+	}
+	if (temp.length() < 8) { // 80bit보다 작은 녀석일때는 바로 보냄
+		newPacket.seq = ++seq; // seq넘버도 추가
+		std::bitset<8> bits(temp); // ex) "10101010" => 숫자 170 == 0b10101010
+		newPacket.data[packet_data_count % 10] = bits.to_ulong(); //data[0]~data[9]에 대해서 8bit(1byte)씩 숫자로 저장
+		newPacket.total_sequence_number = total_packet; // 이녀석은 위에 for문돌때 packet못보내므로 최대 frame개수는 1
+		packet_send_buffer.Add(newPacket); //버퍼에 패킷 추가
+	}
+
+	//std::cout << seq << "개 frame을 전송합니다.\n\nsegemenation된 packet입니다.\n";
+	//std::string data_temp = "";
+	//for (int k = 0; k<newPacket.total_sequence_number; ++k) {
+	//	for (int i = 0; i < sizeof(newPacket.data); ++i) { // sizeof(newPacket->data) == 10
+	//		std::bitset<8> bits(newPacket.data[i]);
+	//		std::cout << bits << "\n";
+	//		data_temp += bits.to_string(); // bitset to string
+	//	}
+	//}
+	std::cout << "\n";
+
+}
+
 // CUDPClient_thdDlg 메시지 처리기
 
-UINT RXThread(LPVOID arg) //Receive
+UINT RXThread(LPVOID arg) //RXThread 함수 정의
 {
 	ThreadArg *pArg = (ThreadArg *)arg;
 	CStringList *plist = pArg->pList;
 	CUDPClient_thdDlg *pDlg = (CUDPClient_thdDlg *)pArg->pDlg;
-	while (pArg->Thread_run)
-	{
+	std::string temp;
+	while (pArg->Thread_run) {
 		POSITION pos = plist->GetHeadPosition();
 		POSITION current_pos;
-		while (pos != NULL)
-		{
+		while (pos != NULL) {
 			current_pos = pos;
 			rx_cs.Lock();
-			CString str = plist->GetNext(pos);
+			CString str = plist->GetNext(pos); // reassemble한 data를 저장한 list에서 1개 꺼내옴
+			temp = CT2CA(str); // CString to string
+			temp = BinaryStr_to_CString(temp); // 실제 문자열로 복구
 			rx_cs.Unlock();
 
 			CString message;
-
 			pDlg->m_rx_edit.GetWindowText(message);
-			message += str;
+			message += CString(temp.c_str()); // string to CString
+			message += "\r\n";
 			pDlg->m_rx_edit.SetWindowTextW(message);
 			pDlg->m_rx_edit.LineScroll(pDlg->m_rx_edit.GetLineCount());
 
@@ -110,11 +215,13 @@ UINT RXThread(LPVOID arg) //Receive
 	return 0;
 }
 
-UINT TXThread(LPVOID arg) //Send
+
+UINT TXThread(LPVOID arg) //TXThread 함수 정의
 {
 	ThreadArg *pArg = (ThreadArg *)arg;
 	CStringList *plist = pArg->pList;
 	CUDPClient_thdDlg *pDlg = (CUDPClient_thdDlg *)pArg->pDlg;
+	
 
 	while (pArg->Thread_run)
 	{
@@ -124,19 +231,22 @@ UINT TXThread(LPVOID arg) //Send
 		{
 			current_pos = pos;
 			tx_cs.Lock();
-			CString str = plist->GetNext(pos);
+			CString str = plist->GetNext(pos); // 클릭했을때 문자열이 plist에 담김, 그걸 str로 가져옴
+			pDlg->packetSegmentation(str); // 그 CString str에 대해 segmentation하여 pack버퍼에 넣음
 			tx_cs.Unlock();
+
 
 			CString message;
 			pDlg->m_tx_edit.GetWindowText(message);
 			message += "\r\n";
-
 			pDlg->m_tx_edit.SetWindowTextW(message);
-			pDlg->m_ipaddr.GetWindowTextW(pDlg->HostAddress); /// 창에서 ip주소를 가지고 옵니다.
 
-
-
-			pDlg->m_pDataSocket->SendToEx(str, (str.GetLength() + 1) * sizeof(TCHAR), pDlg->HostPort, pDlg->HostAddress, 0);
+			while(!pDlg->packet_send_buffer.IsEmpty()){ // 패킷버퍼에 뭔가있으면 보냄
+				//(char*)& 안해주면 구조체 못보냄. 수신단도 저렇게 받아줘야함
+				pDlg->m_pDataSocket->SendToEx((char*)&pDlg->packet_send_buffer.GetAt(0), sizeof(Packet), pDlg->peerPort, pDlg->peerIp, 0);
+				pDlg->packet_send_buffer.RemoveAt(0); //보낸거 제거
+			}
+			//pDlg->m_pDataSocket->SendToEx(str, (str.GetLength() + 1) * sizeof(TCHAR), pDlg->peerPort, pDlg->peerIp, 0); ///UDP소켓을 통하여 해당 포트와 ip주소로 메세지를 전송합니다.
 			pDlg->m_tx_edit.LineScroll(pDlg->m_tx_edit.GetLineCount());
 
 			plist->RemoveAt(current_pos);
@@ -174,8 +284,20 @@ BOOL CUDPClient_thdDlg::OnInitDialog()
 	SetIcon(m_hIcon, TRUE);			// 큰 아이콘을 설정합니다.
 	SetIcon(m_hIcon, FALSE);		// 작은 아이콘을 설정합니다.
 
-	// TODO: 여기에 추가 초기화 작업을 추가합니다.
-	m_pDataSocket = NULL; //
+	/// TODO: 여기에 추가 초기화 작업을 추가합니다.
+
+
+	packet_send_buffer.RemoveAll(); // packet buffer 초기화
+	
+	//std::cout<<CString_to_BinaryStr(_T("GTG"))<<"\n";
+	//std::cout << BinaryStr_to_CString(CString_to_BinaryStr(_T("GTG")))<<"\n";
+
+	m_ipaddr.SetWindowTextW(_T("127.0.0.1"));
+
+	peerPort = 6789;
+	m_ipaddr.GetWindowTextW(peerIp);
+
+	//m_pDataSocket = NULL; //
 	m_pDataSocket = new CDataSocket(this);
 	m_pDataSocket->Create(8000, SOCK_DGRAM);
 	//m_pDataSocket->Connect(_T(ip), 8000); //
@@ -189,7 +311,7 @@ BOOL CUDPClient_thdDlg::OnInitDialog()
 	arg2.pList = newlist2;
 	arg2.Thread_run = 1;
 	arg2.pDlg = this;
-	m_ipaddr.SetWindowTextW(_T("127.0.0.1"));
+	
 
 
 	pThread1 = AfxBeginThread(TXThread, (LPVOID)&arg1);
@@ -260,6 +382,9 @@ void CUDPClient_thdDlg::OnBnClickedSend()
 	}
 	else
 	{
+		m_ipaddr.GetWindowTextW( peerIp );
+		peerPort = 6789;
+
 		CString tx_message;
 		m_tx_edit_short.GetWindowText(tx_message);
 		//tx_message += _T("\r\n");
@@ -281,23 +406,92 @@ void CUDPClient_thdDlg::OnBnClickedClose()
 	// TODO: 여기에 컨트롤 알림 처리기 코드를 추가합니다.
 }
 
+template<class T> // 퀵정렬 템플릿
+void QSortCArray(T& t, int(__cdecl *compare)(const void *elem1, const void *elem2))
+{
+	if (t.GetSize() <= 0)
+	{
+		return;
+	}
+	qsort(t.GetData(), t.GetSize(), sizeof(t[0]), compare);
+}
 
+// CPacket 자료형 비교 함수 퀵정렬용
+int ComparePacket(const void *elem1, const void *elem2)
+{
+	Packet* p1 = (Packet*)elem1;
+	Packet* p2 = (Packet*)elem2;
+	if (p1->seq > p2->seq) return +1;
+	if (p1->seq < p2->seq) return -1;
+	return 0;
+}
 void CUDPClient_thdDlg::ProcessReceive(CDataSocket* pSocket, int nErrorCode)
 {
-	TCHAR pBuf[1024 + 1];
-	CString strData;
-	int nbytes = 0;
-	memset(pBuf, 0, 1024 * 2);
+	TCHAR pBuf[16 + 1]; // 16byte Packet수신용
+	int nbytes;
+	memset(pBuf, 0, sizeof(pBuf));
 
-	nbytes = pSocket->Receive(pBuf, 1024);
+	Packet* newPacket = new Packet();
+	nbytes = pSocket->Receive(pBuf, sizeof(Packet)); // 패킷이 char[]형으로 날아옴
 	pBuf[nbytes] = NULL;
-	strData = (LPCTSTR)pBuf;
 
-	//CString SocketAddress = _T(ip);
-	//UINT SocketPort = 6789;
-	//memset(pBuf, 0, 1025 * 2);
+	newPacket = (Packet*)pBuf; // Packet형으로 만듦
 
-	rx_cs.Lock();
-	arg2.pList->AddTail((LPCTSTR)strData);
-	rx_cs.Unlock();
+							   /*CIPAddressCtrl myCtrlIP;
+							   DWORD dwIP;
+							   myCtrlIP.GetAddress(&peerIp);
+							   */
+							   /*std::wcout << (const wchar_t*)peerIp.Format(_T("IP주소: %d.%d.%d.%d"),FIRST_IPADDRESS(peerIp),SECOND_IPADDRESS(peerIp),THIRD_IPADDRESS(peerIp),FOURTH_IPADDRESS(peerIp));
+							   << "로 부터 총 "<< newPacket->total_sequence_number <<"개 frame 수신중\n=> ";*/
+	std::wcout << (const wchar_t*)peerIp << "로 부터 총 " << newPacket->total_sequence_number << "개 frame 수신중\n=> ";
+	std::cout << "현재 " << newPacket->seq << "번째 frame도착\n";
+
+	//받은 packet에 대하여 80bit data추출
+	std::string data_temp = "";
+	for (int i = 0; i < sizeof(newPacket->data); ++i) { // sizeof(newPacket->data) == 10
+		std::bitset<8> bits(newPacket->data[i]);
+		data_temp += bits.to_string(); // bitset to string
+	}
+	cout << "이진화데이터 80bit :\n" << data_temp << "\n를 받았습니다.\n\n";
+
+	packet_receive_buffer.Add(*newPacket); // 받은 패킷버퍼에 추가.
+	if (packet_receive_buffer.GetSize() == newPacket->total_sequence_number) { // 1:1이므로 받은거에 들어있는거 바로체크해도됨
+																			   // 최대 frame수랑 buffer에 저장된 frame수랑 같으면
+
+																			   //Packet에 대하여 오름차순 퀵정렬
+		QSortCArray(packet_receive_buffer, ComparePacket);
+		//받은패킷들에 대해 모든 data추출 80*total_sequence_number bit
+		std::string data_temp = "";
+		for (int k = 0; k<newPacket->total_sequence_number; ++k) {
+			for (int i = 0; i < sizeof(newPacket->data); ++i) { // sizeof(newPacket->data) == 10
+				std::bitset<8> bits(packet_receive_buffer.GetAt(k).data[i]);
+				std::cout << bits << "\n";
+				data_temp += bits.to_string(); // bitset to string
+			}
+		}
+
+		rx_cs.Lock();
+		arg2.pList->AddTail(CString(data_temp.c_str())); // string to CString // 추출한 data값 을 버퍼에 추가
+		rx_cs.Unlock();
+
+		packet_receive_buffer.RemoveAll(); // 버퍼비우기
+
+										   // => 일정시간 같지 않으면 error control 해야함 (나중에 구현)
+	}
+	//TCHAR pBuf[1024 + 1];
+	//CString strData;
+	//int nbytes = 0;
+	//memset(pBuf, 0, 1024 * 2);
+
+	//nbytes = pSocket->Receive(pBuf, 1024);
+	//pBuf[nbytes] = NULL;
+	//strData = (LPCTSTR)pBuf;
+
+	////CString SocketAddress = serverIp;
+	////UINT SocketPort = ;
+	////memset(pBuf, 0, 1025 * 2);
+
+	//rx_cs.Lock();
+	//arg2.pList->AddTail((LPCTSTR)strData);
+	//rx_cs.Unlock();
 }

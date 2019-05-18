@@ -1,15 +1,21 @@
 # chatting_MFC
-UDP [x]
+UDP 1:1 [x]
 
+Segmentaion [x]
 
-segmentaion []
+Reassembly [x]
 
-reassembly []
+한글,한자 외 유니코드언어 전송 []
 
-checksum []
+Port 입력받는칸 만들기 []
 
+상대 IP 출력 text box 만들기 []
 
-ARQ
+Checksum []
+
+-ARQ
+
+Timer_thread []
 
 Stop and Wait []
 
@@ -17,5 +23,6 @@ Go Back N []
 
 Selective Reject []
 
-
 File Transmission []
+
+Error ratio test []

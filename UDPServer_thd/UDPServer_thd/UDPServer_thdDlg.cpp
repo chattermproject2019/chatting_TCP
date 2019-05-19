@@ -87,8 +87,8 @@ END_MESSAGE_MAP()
 
 
 std::string CString_to_BinaryStr(CString message) { // CString 으로 반환하면 hex로 되어서 연산까다로움
-
 	std::string temp = CT2CA(message); // CString to string
+
 	char *ptr = (char*)temp.c_str();//"GFG";
 
 	std::string temp2 = "";
@@ -96,10 +96,17 @@ std::string CString_to_BinaryStr(CString message) { // CString 으로 반환하면 hex
 	int i;
 	for (; *ptr != 0; ++ptr)
 	{
-		//printf("%c => ", *ptr);
-		for (i = 7; i >= 0; --i) // 8bit
-			temp2 += (*ptr & 1 << i) ? ("1") : ("0");//putchar('1') : putchar('0');
-													 //putchar('\n');
+		if (*ptr & 0x80 == 0x80) { // 한글, 한자일때
+			for (i = 7; i >= 0; --i) // 8bit
+				temp2 += (*ptr & 1 << i) ? ("1") : ("0");
+			++ptr;
+			for (i = 7; i >= 0; --i) // 8bit
+				temp2 += (*ptr & 1 << i) ? ("1") : ("0");
+		}
+		else { // 아스키코드로 표현가능할때
+			for (i = 7; i >= 0; --i) // 8bit
+				temp2 += (*ptr & 1 << i) ? ("1") : ("0");
+		}
 	}
 	//std::cout<<"이진화된 문자는" << temp2 << "입니다.\n\n";
 

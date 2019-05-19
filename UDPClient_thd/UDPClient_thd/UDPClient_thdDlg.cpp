@@ -1,5 +1,5 @@
-
-// UDPClient_thdDlg.cpp : ±¸Çö ÆÄÀÏ
+ï»¿
+// UDPClient_thdDlg.cpp : êµ¬í˜„ íŒŒì¼
 //
 
 #include "stdafx.h"
@@ -23,22 +23,22 @@ CCriticalSection rx_cs;
 
 
 
-// ÀÀ¿ë ÇÁ·Î±×·¥ Á¤º¸¿¡ »ç¿ëµÇ´Â CAboutDlg ´ëÈ­ »óÀÚÀÔ´Ï´Ù.
+// ì‘ìš© í”„ë¡œê·¸ë¨ ì •ë³´ì— ì‚¬ìš©ë˜ëŠ” CAboutDlg ëŒ€í™” ìƒìì…ë‹ˆë‹¤.
 
 class CAboutDlg : public CDialogEx
 {
 public:
 	CAboutDlg();
 
-// ´ëÈ­ »óÀÚ µ¥ÀÌÅÍÀÔ´Ï´Ù.
+// ëŒ€í™” ìƒì ë°ì´í„°ì…ë‹ˆë‹¤.
 #ifdef AFX_DESIGN_TIME
 	enum { IDD = IDD_ABOUTBOX };
 #endif
 
 	protected:
-	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV Áö¿øÀÔ´Ï´Ù.
+	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV ì§€ì›ì…ë‹ˆë‹¤.
 
-// ±¸ÇöÀÔ´Ï´Ù.
+// êµ¬í˜„ì…ë‹ˆë‹¤.
 protected:
 	DECLARE_MESSAGE_MAP()
 };
@@ -56,7 +56,7 @@ BEGIN_MESSAGE_MAP(CAboutDlg, CDialogEx)
 END_MESSAGE_MAP()
 
 
-// CUDPClient_thdDlg ´ëÈ­ »óÀÚ
+// CUDPClient_thdDlg ëŒ€í™” ìƒì
 
 
 
@@ -84,9 +84,10 @@ BEGIN_MESSAGE_MAP(CUDPClient_thdDlg, CDialogEx)
 END_MESSAGE_MAP()
 
 
-std::string CString_to_BinaryStr(CString message) { // CString À¸·Î ¹İÈ¯ÇÏ¸é hex·Î µÇ¾î¼­ ¿¬»ê±î´Ù·Î¿ò
+std::string CString_to_BinaryStr(CString message) { // CString ìœ¼ë¡œ ë°˜í™˜í•˜ë©´ hexë¡œ ë˜ì–´ì„œ ì—°ì‚°ê¹Œë‹¤ë¡œì›€
 	
 	std::string temp = CT2CA(message); // CString to string
+
 	char *ptr = (char*)temp.c_str();//"GFG";
 
 	std::string temp2 = "";
@@ -94,12 +95,19 @@ std::string CString_to_BinaryStr(CString message) { // CString À¸·Î ¹İÈ¯ÇÏ¸é hex
 	int i;
 	for (; *ptr != 0; ++ptr)
 	{
-		//printf("%c => ", *ptr);
-		for (i = 7; i >= 0; --i) // 8bit
-			temp2 += (*ptr & 1 << i) ? ("1") : ("0");//putchar('1') : putchar('0');
-		//putchar('\n');
+		if (*ptr & 0x80 == 0x80) { // í•œê¸€, í•œìì¼ë•Œ
+			for (i = 7; i >= 0; --i) // 8bit
+				temp2 += (*ptr & 1 << i) ? ("1") : ("0");
+			++ptr;
+			for (i = 7; i >= 0; --i) // 8bit
+				temp2 += (*ptr & 1 << i) ? ("1") : ("0");
+		}
+		else { // ì•„ìŠ¤í‚¤ì½”ë“œë¡œ í‘œí˜„ê°€ëŠ¥í• ë•Œ
+			for (i = 7; i >= 0; --i) // 8bit
+				temp2 += (*ptr & 1 << i) ? ("1") : ("0");
+		}
 	}
-	//std::cout<<"ÀÌÁøÈ­µÈ ¹®ÀÚ´Â" << temp2 << "ÀÔ´Ï´Ù.\n\n";
+	//std::cout<<"ì´ì§„í™”ëœ ë¬¸ìëŠ”" << temp2 << "ì…ë‹ˆë‹¤.\n\n";
 	
 	return temp2;
 }
@@ -128,10 +136,10 @@ std::string BinaryStr_to_CString(std::string binary_message) {
 
 void CUDPClient_thdDlg::packetSegmentation(CString message) {
 
-	std::string binaried = CString_to_BinaryStr(message); // ¹®ÀÚ¿­À» 2Áø¼ö¹®ÀÚ¿­·Î¸¸µê´Ï´Ù. ±æÀÌ´Â 1¹®ÀÚ¸¦ 8bit¾¿ ³ª´¯´Ï´Ù.
-	// °¢ ¹®ÀÚ¸¦ 8bitÅ©±â·Î ÀÌÁøÈ­ÇÏ¿´À¸¹Ç·Î, PacketÀÇ data¿¡´Â 80bitÁï 10°³ÀÇ ¹®ÀÚ¸¦ ÀúÀåÇÏ¿© º¸³¾ ¼ö ÀÖ½À´Ï´Ù.
-	std::wcout<<"º¸³»½Ã·Á´Â ¸Ş¼¼Áö :" << (const wchar_t*)message << " ´Â \n"; //CStringÀº wcoutÀ¸·Î Ãâ·ÂÇØ¾ß 16Áø¼ö·Î ¾È³ª¿È
-	std::cout << "ÀÌÁø¼ö·Î " << binaried << "ÀÔ´Ï´Ù\n";
+	std::string binaried = CString_to_BinaryStr(message); // ë¬¸ìì—´ì„ 2ì§„ìˆ˜ë¬¸ìì—´ë¡œë§Œë“¦ë‹ˆë‹¤. ê¸¸ì´ëŠ” 1ë¬¸ìë¥¼ 8bitì”© ë‚˜ëˆ•ë‹ˆë‹¤.
+	// ê° ë¬¸ìë¥¼ 8bití¬ê¸°ë¡œ ì´ì§„í™”í•˜ì˜€ìœ¼ë¯€ë¡œ, Packetì˜ dataì—ëŠ” 80bitì¦‰ 10ê°œì˜ ë¬¸ìë¥¼ ì €ì¥í•˜ì—¬ ë³´ë‚¼ ìˆ˜ ìˆìŠµë‹ˆë‹¤.
+	std::wcout<<"ë³´ë‚´ì‹œë ¤ëŠ” ë©”ì„¸ì§€ :" << (const wchar_t*)message << " ëŠ” \n"; //CStringì€ wcoutìœ¼ë¡œ ì¶œë ¥í•´ì•¼ 16ì§„ìˆ˜ë¡œ ì•ˆë‚˜ì˜´
+	std::cout << "ì´ì§„ìˆ˜ë¡œ " << binaried << "ì…ë‹ˆë‹¤\n";
 	std::string temp = "";
 
 	unsigned short total_packet;
@@ -146,30 +154,30 @@ void CUDPClient_thdDlg::packetSegmentation(CString message) {
 	int packet_data_count = 0;
 	int seq = 0;
 	for (int i = 0; i < binaried.length(); ++i) {
-		temp += binaried.at(i); // 1bit¾¿ Ãß°¡.
-		if (temp.length() == 8) { // 8¹øÂ°¸¶´Ù 8bitÀÌ¹Ç·Î 1byte¿¡ ÀúÀå°¡´É
-			std::bitset<8> bits(temp); // ex) "10101010" => ¼ıÀÚ 170 == 0b10101010
-			newPacket.data[packet_data_count % 10] = bits.to_ulong(); //data[0]~data[9]¿¡ ´ëÇØ¼­ 8bit(1byte)¾¿ ¼ıÀÚ·Î ÀúÀå
+		temp += binaried.at(i); // 1bitì”© ì¶”ê°€.
+		if (temp.length() == 8) { // 8ë²ˆì§¸ë§ˆë‹¤ 8bitì´ë¯€ë¡œ 1byteì— ì €ì¥ê°€ëŠ¥
+			std::bitset<8> bits(temp); // ex) "10101010" => ìˆ«ì 170 == 0b10101010
+			newPacket.data[packet_data_count % 10] = bits.to_ulong(); //data[0]~data[9]ì— ëŒ€í•´ì„œ 8bit(1byte)ì”© ìˆ«ìë¡œ ì €ì¥
 			packet_data_count++;
 			temp = "";
-			if (packet_data_count == 10) { // ¸Å¹ø 80¹øÂ° bit¸¦ Ãß°¡ÇÒ¶§¸¶´Ù ÀÌ¶§±îÁö ÀúÀåÇÑ packetÀ» packet buffer¿¡ ÀúÀåÇÕ´Ï´Ù.
-				newPacket.seq = ++seq; // seq³Ñ¹öµµ Ãß°¡
-				newPacket.total_sequence_number = total_packet; // ¹®ÀÚ¿­ ÀÌÁøÈ­ÇÑ°Å¸¦ 80bit·Î ³ª´©¸é ÃÑ º¸³¾ frame°³¼ö³ª¿È
-				packet_send_buffer.Add(newPacket); //¹öÆÛ¿¡ ÆĞÅ¶ Ãß°¡
-				newPacket = Packet(); // »õ ÆĞÅ¶ÇÒ´ç
+			if (packet_data_count == 10) { // ë§¤ë²ˆ 80ë²ˆì§¸ bitë¥¼ ì¶”ê°€í• ë•Œë§ˆë‹¤ ì´ë•Œê¹Œì§€ ì €ì¥í•œ packetì„ packet bufferì— ì €ì¥í•©ë‹ˆë‹¤.
+				newPacket.seq = ++seq; // seqë„˜ë²„ë„ ì¶”ê°€
+				newPacket.total_sequence_number = total_packet; // ë¬¸ìì—´ ì´ì§„í™”í•œê±°ë¥¼ 80bitë¡œ ë‚˜ëˆ„ë©´ ì´ ë³´ë‚¼ frameê°œìˆ˜ë‚˜ì˜´
+				packet_send_buffer.Add(newPacket); //ë²„í¼ì— íŒ¨í‚· ì¶”ê°€
+				newPacket = Packet(); // ìƒˆ íŒ¨í‚·í• ë‹¹
 				packet_data_count = 0;
 			}
 		}
 	}
-	if (temp.length() < 8) { // 80bitº¸´Ù ÀÛÀº ³à¼®ÀÏ¶§´Â ¹Ù·Î º¸³¿
-		newPacket.seq = ++seq; // seq³Ñ¹öµµ Ãß°¡
-		std::bitset<8> bits(temp); // ex) "10101010" => ¼ıÀÚ 170 == 0b10101010
-		newPacket.data[packet_data_count % 10] = bits.to_ulong(); //data[0]~data[9]¿¡ ´ëÇØ¼­ 8bit(1byte)¾¿ ¼ıÀÚ·Î ÀúÀå
-		newPacket.total_sequence_number = total_packet; // ÀÌ³à¼®Àº À§¿¡ for¹®µ¹¶§ packet¸øº¸³»¹Ç·Î ÃÖ´ë frame°³¼ö´Â 1
-		packet_send_buffer.Add(newPacket); //¹öÆÛ¿¡ ÆĞÅ¶ Ãß°¡
+	if (temp.length() < 8) { // 80bitë³´ë‹¤ ì‘ì€ ë…€ì„ì¼ë•ŒëŠ” ë°”ë¡œ ë³´ëƒ„
+		newPacket.seq = ++seq; // seqë„˜ë²„ë„ ì¶”ê°€
+		std::bitset<8> bits(temp); // ex) "10101010" => ìˆ«ì 170 == 0b10101010
+		newPacket.data[packet_data_count % 10] = bits.to_ulong(); //data[0]~data[9]ì— ëŒ€í•´ì„œ 8bit(1byte)ì”© ìˆ«ìë¡œ ì €ì¥
+		newPacket.total_sequence_number = total_packet; // ì´ë…€ì„ì€ ìœ„ì— forë¬¸ëŒë•Œ packetëª»ë³´ë‚´ë¯€ë¡œ ìµœëŒ€ frameê°œìˆ˜ëŠ” 1
+		packet_send_buffer.Add(newPacket); //ë²„í¼ì— íŒ¨í‚· ì¶”ê°€
 	}
 
-	//std::cout << seq << "°³ frameÀ» Àü¼ÛÇÕ´Ï´Ù.\n\nsegemenationµÈ packetÀÔ´Ï´Ù.\n";
+	//std::cout << seq << "ê°œ frameì„ ì „ì†¡í•©ë‹ˆë‹¤.\n\nsegemenationëœ packetì…ë‹ˆë‹¤.\n";
 	//std::string data_temp = "";
 	//for (int k = 0; k<newPacket.total_sequence_number; ++k) {
 	//	for (int i = 0; i < sizeof(newPacket.data); ++i) { // sizeof(newPacket->data) == 10
@@ -182,9 +190,9 @@ void CUDPClient_thdDlg::packetSegmentation(CString message) {
 
 }
 
-// CUDPClient_thdDlg ¸Ş½ÃÁö Ã³¸®±â
+// CUDPClient_thdDlg ë©”ì‹œì§€ ì²˜ë¦¬ê¸°
 
-UINT RXThread(LPVOID arg) //RXThread ÇÔ¼ö Á¤ÀÇ
+UINT RXThread(LPVOID arg) //RXThread í•¨ìˆ˜ ì •ì˜
 {
 	ThreadArg *pArg = (ThreadArg *)arg;
 	CStringList *plist = pArg->pList;
@@ -196,9 +204,9 @@ UINT RXThread(LPVOID arg) //RXThread ÇÔ¼ö Á¤ÀÇ
 		while (pos != NULL) {
 			current_pos = pos;
 			rx_cs.Lock();
-			CString str = plist->GetNext(pos); // reassembleÇÑ data¸¦ ÀúÀåÇÑ list¿¡¼­ 1°³ ²¨³»¿È
+			CString str = plist->GetNext(pos); // reassembleí•œ dataë¥¼ ì €ì¥í•œ listì—ì„œ 1ê°œ êº¼ë‚´ì˜´
 			temp = CT2CA(str); // CString to string
-			temp = BinaryStr_to_CString(temp); // ½ÇÁ¦ ¹®ÀÚ¿­·Î º¹±¸
+			temp = BinaryStr_to_CString(temp); // ì‹¤ì œ ë¬¸ìì—´ë¡œ ë³µêµ¬
 			rx_cs.Unlock();
 
 			CString message;
@@ -216,7 +224,7 @@ UINT RXThread(LPVOID arg) //RXThread ÇÔ¼ö Á¤ÀÇ
 }
 
 
-UINT TXThread(LPVOID arg) //TXThread ÇÔ¼ö Á¤ÀÇ
+UINT TXThread(LPVOID arg) //TXThread í•¨ìˆ˜ ì •ì˜
 {
 	ThreadArg *pArg = (ThreadArg *)arg;
 	CStringList *plist = pArg->pList;
@@ -231,8 +239,8 @@ UINT TXThread(LPVOID arg) //TXThread ÇÔ¼ö Á¤ÀÇ
 		{
 			current_pos = pos;
 			tx_cs.Lock();
-			CString str = plist->GetNext(pos); // Å¬¸¯ÇßÀ»¶§ ¹®ÀÚ¿­ÀÌ plist¿¡ ´ã±è, ±×°É str·Î °¡Á®¿È
-			pDlg->packetSegmentation(str); // ±× CString str¿¡ ´ëÇØ segmentationÇÏ¿© pack¹öÆÛ¿¡ ³ÖÀ½
+			CString str = plist->GetNext(pos); // í´ë¦­í–ˆì„ë•Œ ë¬¸ìì—´ì´ plistì— ë‹´ê¹€, ê·¸ê±¸ strë¡œ ê°€ì ¸ì˜´
+			pDlg->packetSegmentation(str); // ê·¸ CString strì— ëŒ€í•´ segmentationí•˜ì—¬ packë²„í¼ì— ë„£ìŒ
 			tx_cs.Unlock();
 
 
@@ -241,12 +249,12 @@ UINT TXThread(LPVOID arg) //TXThread ÇÔ¼ö Á¤ÀÇ
 			message += "\r\n";
 			pDlg->m_tx_edit.SetWindowTextW(message);
 
-			while(!pDlg->packet_send_buffer.IsEmpty()){ // ÆĞÅ¶¹öÆÛ¿¡ ¹º°¡ÀÖÀ¸¸é º¸³¿
-				//(char*)& ¾ÈÇØÁÖ¸é ±¸Á¶Ã¼ ¸øº¸³¿. ¼ö½Å´Üµµ Àú·¸°Ô ¹Ş¾ÆÁà¾ßÇÔ
+			while(!pDlg->packet_send_buffer.IsEmpty()){ // íŒ¨í‚·ë²„í¼ì— ë­”ê°€ìˆìœ¼ë©´ ë³´ëƒ„
+				//(char*)& ì•ˆí•´ì£¼ë©´ êµ¬ì¡°ì²´ ëª»ë³´ëƒ„. ìˆ˜ì‹ ë‹¨ë„ ì €ë ‡ê²Œ ë°›ì•„ì¤˜ì•¼í•¨
 				pDlg->m_pDataSocket->SendToEx((char*)&pDlg->packet_send_buffer.GetAt(0), sizeof(Packet), pDlg->peerPort, pDlg->peerIp, 0);
-				pDlg->packet_send_buffer.RemoveAt(0); //º¸³½°Å Á¦°Å
+				pDlg->packet_send_buffer.RemoveAt(0); //ë³´ë‚¸ê±° ì œê±°
 			}
-			//pDlg->m_pDataSocket->SendToEx(str, (str.GetLength() + 1) * sizeof(TCHAR), pDlg->peerPort, pDlg->peerIp, 0); ///UDP¼ÒÄÏÀ» ÅëÇÏ¿© ÇØ´ç Æ÷Æ®¿Í ipÁÖ¼Ò·Î ¸Ş¼¼Áö¸¦ Àü¼ÛÇÕ´Ï´Ù.
+			//pDlg->m_pDataSocket->SendToEx(str, (str.GetLength() + 1) * sizeof(TCHAR), pDlg->peerPort, pDlg->peerIp, 0); ///UDPì†Œì¼“ì„ í†µí•˜ì—¬ í•´ë‹¹ í¬íŠ¸ì™€ ipì£¼ì†Œë¡œ ë©”ì„¸ì§€ë¥¼ ì „ì†¡í•©ë‹ˆë‹¤.
 			pDlg->m_tx_edit.LineScroll(pDlg->m_tx_edit.GetLineCount());
 
 			plist->RemoveAt(current_pos);
@@ -259,9 +267,9 @@ BOOL CUDPClient_thdDlg::OnInitDialog()
 {
 	CDialogEx::OnInitDialog();
 
-	// ½Ã½ºÅÛ ¸Ş´º¿¡ "Á¤º¸..." ¸Ş´º Ç×¸ñÀ» Ãß°¡ÇÕ´Ï´Ù.
+	// ì‹œìŠ¤í…œ ë©”ë‰´ì— "ì •ë³´..." ë©”ë‰´ í•­ëª©ì„ ì¶”ê°€í•©ë‹ˆë‹¤.
 
-	// IDM_ABOUTBOX´Â ½Ã½ºÅÛ ¸í·É ¹üÀ§¿¡ ÀÖ¾î¾ß ÇÕ´Ï´Ù.
+	// IDM_ABOUTBOXëŠ” ì‹œìŠ¤í…œ ëª…ë ¹ ë²”ìœ„ì— ìˆì–´ì•¼ í•©ë‹ˆë‹¤.
 	ASSERT((IDM_ABOUTBOX & 0xFFF0) == IDM_ABOUTBOX);
 	ASSERT(IDM_ABOUTBOX < 0xF000);
 
@@ -279,18 +287,20 @@ BOOL CUDPClient_thdDlg::OnInitDialog()
 		}
 	}
 
-	// ÀÌ ´ëÈ­ »óÀÚÀÇ ¾ÆÀÌÄÜÀ» ¼³Á¤ÇÕ´Ï´Ù.  ÀÀ¿ë ÇÁ·Î±×·¥ÀÇ ÁÖ Ã¢ÀÌ ´ëÈ­ »óÀÚ°¡ ¾Æ´Ò °æ¿ì¿¡´Â
-	//  ÇÁ·¹ÀÓ¿öÅ©°¡ ÀÌ ÀÛ¾÷À» ÀÚµ¿À¸·Î ¼öÇàÇÕ´Ï´Ù.
-	SetIcon(m_hIcon, TRUE);			// Å« ¾ÆÀÌÄÜÀ» ¼³Á¤ÇÕ´Ï´Ù.
-	SetIcon(m_hIcon, FALSE);		// ÀÛÀº ¾ÆÀÌÄÜÀ» ¼³Á¤ÇÕ´Ï´Ù.
+	// ì´ ëŒ€í™” ìƒìì˜ ì•„ì´ì½˜ì„ ì„¤ì •í•©ë‹ˆë‹¤.  ì‘ìš© í”„ë¡œê·¸ë¨ì˜ ì£¼ ì°½ì´ ëŒ€í™” ìƒìê°€ ì•„ë‹ ê²½ìš°ì—ëŠ”
+	//  í”„ë ˆì„ì›Œí¬ê°€ ì´ ì‘ì—…ì„ ìë™ìœ¼ë¡œ ìˆ˜í–‰í•©ë‹ˆë‹¤.
+	SetIcon(m_hIcon, TRUE);			// í° ì•„ì´ì½˜ì„ ì„¤ì •í•©ë‹ˆë‹¤.
+	SetIcon(m_hIcon, FALSE);		// ì‘ì€ ì•„ì´ì½˜ì„ ì„¤ì •í•©ë‹ˆë‹¤.
 
-	/// TODO: ¿©±â¿¡ Ãß°¡ ÃÊ±âÈ­ ÀÛ¾÷À» Ãß°¡ÇÕ´Ï´Ù.
+	/// TODO: ì—¬ê¸°ì— ì¶”ê°€ ì´ˆê¸°í™” ì‘ì—…ì„ ì¶”ê°€í•©ë‹ˆë‹¤.
 
 
-	packet_send_buffer.RemoveAll(); // packet buffer ÃÊ±âÈ­
+	packet_send_buffer.RemoveAll(); // packet buffer ì´ˆê¸°í™”
 	
 	//std::cout<<CString_to_BinaryStr(_T("GTG"))<<"\n";
 	//std::cout << BinaryStr_to_CString(CString_to_BinaryStr(_T("GTG")))<<"\n";
+
+	//CString saa = _T("Ø¨Ø§ÙŠØª (ÙˆÙØ­Ù’Ø¯Ø© Ù„ÙÙ‚ÙÙŠØ§Ø³ Ø§Ù„Ù…ÙØ¹Ù’Ù„ÙˆÙ…Ø§Øª Ø§Ù„Ù‘ØªÙŠ ÙŠÙØ³Ù’ØªÙØ·ÙŠØ¹ Ø§Ù„Ø­Ø§Ø³ÙˆØ¨ ØªÙØ®Ù’Ø²ÙŠÙ†ÙÙ‡Ø§");
 
 	m_ipaddr.SetWindowTextW(_T("127.0.0.1"));
 
@@ -317,7 +327,7 @@ BOOL CUDPClient_thdDlg::OnInitDialog()
 	pThread1 = AfxBeginThread(TXThread, (LPVOID)&arg1);
 	pThread2 = AfxBeginThread(RXThread, (LPVOID)&arg2);
 
-	return TRUE;  // Æ÷Ä¿½º¸¦ ÄÁÆ®·Ñ¿¡ ¼³Á¤ÇÏÁö ¾ÊÀ¸¸é TRUE¸¦ ¹İÈ¯ÇÕ´Ï´Ù.
+	return TRUE;  // í¬ì»¤ìŠ¤ë¥¼ ì»¨íŠ¸ë¡¤ì— ì„¤ì •í•˜ì§€ ì•Šìœ¼ë©´ TRUEë¥¼ ë°˜í™˜í•©ë‹ˆë‹¤.
 }
 
 void CUDPClient_thdDlg::OnSysCommand(UINT nID, LPARAM lParam)
@@ -333,19 +343,19 @@ void CUDPClient_thdDlg::OnSysCommand(UINT nID, LPARAM lParam)
 	}
 }
 
-// ´ëÈ­ »óÀÚ¿¡ ÃÖ¼ÒÈ­ ´ÜÃß¸¦ Ãß°¡ÇÒ °æ¿ì ¾ÆÀÌÄÜÀ» ±×¸®·Á¸é
-//  ¾Æ·¡ ÄÚµå°¡ ÇÊ¿äÇÕ´Ï´Ù.  ¹®¼­/ºä ¸ğµ¨À» »ç¿ëÇÏ´Â MFC ÀÀ¿ë ÇÁ·Î±×·¥ÀÇ °æ¿ì¿¡´Â
-//  ÇÁ·¹ÀÓ¿öÅ©¿¡¼­ ÀÌ ÀÛ¾÷À» ÀÚµ¿À¸·Î ¼öÇàÇÕ´Ï´Ù.
+// ëŒ€í™” ìƒìì— ìµœì†Œí™” ë‹¨ì¶”ë¥¼ ì¶”ê°€í•  ê²½ìš° ì•„ì´ì½˜ì„ ê·¸ë¦¬ë ¤ë©´
+//  ì•„ë˜ ì½”ë“œê°€ í•„ìš”í•©ë‹ˆë‹¤.  ë¬¸ì„œ/ë·° ëª¨ë¸ì„ ì‚¬ìš©í•˜ëŠ” MFC ì‘ìš© í”„ë¡œê·¸ë¨ì˜ ê²½ìš°ì—ëŠ”
+//  í”„ë ˆì„ì›Œí¬ì—ì„œ ì´ ì‘ì—…ì„ ìë™ìœ¼ë¡œ ìˆ˜í–‰í•©ë‹ˆë‹¤.
 
 void CUDPClient_thdDlg::OnPaint()
 {
 	if (IsIconic())
 	{
-		CPaintDC dc(this); // ±×¸®±â¸¦ À§ÇÑ µğ¹ÙÀÌ½º ÄÁÅØ½ºÆ®ÀÔ´Ï´Ù.
+		CPaintDC dc(this); // ê·¸ë¦¬ê¸°ë¥¼ ìœ„í•œ ë””ë°”ì´ìŠ¤ ì»¨í…ìŠ¤íŠ¸ì…ë‹ˆë‹¤.
 
 		SendMessage(WM_ICONERASEBKGND, reinterpret_cast<WPARAM>(dc.GetSafeHdc()), 0);
 
-		// Å¬¶óÀÌ¾ğÆ® »ç°¢Çü¿¡¼­ ¾ÆÀÌÄÜÀ» °¡¿îµ¥¿¡ ¸ÂÃä´Ï´Ù.
+		// í´ë¼ì´ì–¸íŠ¸ ì‚¬ê°í˜•ì—ì„œ ì•„ì´ì½˜ì„ ê°€ìš´ë°ì— ë§ì¶¥ë‹ˆë‹¤.
 		int cxIcon = GetSystemMetrics(SM_CXICON);
 		int cyIcon = GetSystemMetrics(SM_CYICON);
 		CRect rect;
@@ -353,7 +363,7 @@ void CUDPClient_thdDlg::OnPaint()
 		int x = (rect.Width() - cxIcon + 1) / 2;
 		int y = (rect.Height() - cyIcon + 1) / 2;
 
-		// ¾ÆÀÌÄÜÀ» ±×¸³´Ï´Ù.
+		// ì•„ì´ì½˜ì„ ê·¸ë¦½ë‹ˆë‹¤.
 		dc.DrawIcon(x, y, m_hIcon);
 	}
 	else
@@ -362,8 +372,8 @@ void CUDPClient_thdDlg::OnPaint()
 	}
 }
 
-// »ç¿ëÀÚ°¡ ÃÖ¼ÒÈ­µÈ Ã¢À» ²ô´Â µ¿¾È¿¡ Ä¿¼­°¡ Ç¥½ÃµÇµµ·Ï ½Ã½ºÅÛ¿¡¼­
-//  ÀÌ ÇÔ¼ö¸¦ È£ÃâÇÕ´Ï´Ù.
+// ì‚¬ìš©ìê°€ ìµœì†Œí™”ëœ ì°½ì„ ë„ëŠ” ë™ì•ˆì— ì»¤ì„œê°€ í‘œì‹œë˜ë„ë¡ ì‹œìŠ¤í…œì—ì„œ
+//  ì´ í•¨ìˆ˜ë¥¼ í˜¸ì¶œí•©ë‹ˆë‹¤.
 HCURSOR CUDPClient_thdDlg::OnQueryDragIcon()
 {
 	return static_cast<HCURSOR>(m_hIcon);
@@ -374,10 +384,10 @@ HCURSOR CUDPClient_thdDlg::OnQueryDragIcon()
 
 void CUDPClient_thdDlg::OnBnClickedSend()
 {
-	// TODO: ¿©±â¿¡ ÄÁÆ®·Ñ ¾Ë¸² Ã³¸®±â ÄÚµå¸¦ Ãß°¡ÇÕ´Ï´Ù.
+	// TODO: ì—¬ê¸°ì— ì»¨íŠ¸ë¡¤ ì•Œë¦¼ ì²˜ë¦¬ê¸° ì½”ë“œë¥¼ ì¶”ê°€í•©ë‹ˆë‹¤.
 	if (m_pDataSocket == NULL)
 	{
-		MessageBox(_T("¼­¹ö¿¡ Á¢¼Ó ¾È ÇÔ!"), _T("¾Ë¸²"), MB_ICONERROR);
+		MessageBox(_T("ì„œë²„ì— ì ‘ì† ì•ˆ í•¨!"), _T("ì•Œë¦¼"), MB_ICONERROR);
 
 	}
 	else
@@ -403,10 +413,10 @@ void CUDPClient_thdDlg::OnBnClickedSend()
 
 void CUDPClient_thdDlg::OnBnClickedClose()
 {
-	// TODO: ¿©±â¿¡ ÄÁÆ®·Ñ ¾Ë¸² Ã³¸®±â ÄÚµå¸¦ Ãß°¡ÇÕ´Ï´Ù.
+	// TODO: ì—¬ê¸°ì— ì»¨íŠ¸ë¡¤ ì•Œë¦¼ ì²˜ë¦¬ê¸° ì½”ë“œë¥¼ ì¶”ê°€í•©ë‹ˆë‹¤.
 }
 
-template<class T> // ÄüÁ¤·Ä ÅÛÇÃ¸´
+template<class T> // í€µì •ë ¬ í…œí”Œë¦¿
 void QSortCArray(T& t, int(__cdecl *compare)(const void *elem1, const void *elem2))
 {
 	if (t.GetSize() <= 0)
@@ -416,7 +426,7 @@ void QSortCArray(T& t, int(__cdecl *compare)(const void *elem1, const void *elem
 	qsort(t.GetData(), t.GetSize(), sizeof(t[0]), compare);
 }
 
-// CPacket ÀÚ·áÇü ºñ±³ ÇÔ¼ö ÄüÁ¤·Ä¿ë
+// CPacket ìë£Œí˜• ë¹„êµ í•¨ìˆ˜ í€µì •ë ¬ìš©
 int ComparePacket(const void *elem1, const void *elem2)
 {
 	Packet* p1 = (Packet*)elem1;
@@ -427,40 +437,40 @@ int ComparePacket(const void *elem1, const void *elem2)
 }
 void CUDPClient_thdDlg::ProcessReceive(CDataSocket* pSocket, int nErrorCode)
 {
-	TCHAR pBuf[16 + 1]; // 16byte Packet¼ö½Å¿ë
+	TCHAR pBuf[16 + 1]; // 16byte Packetìˆ˜ì‹ ìš©
 	int nbytes;
 	memset(pBuf, 0, sizeof(pBuf));
 
 	Packet* newPacket = new Packet();
-	nbytes = pSocket->Receive(pBuf, sizeof(Packet)); // ÆĞÅ¶ÀÌ char[]ÇüÀ¸·Î ³¯¾Æ¿È
+	nbytes = pSocket->Receive(pBuf, sizeof(Packet)); // íŒ¨í‚·ì´ char[]í˜•ìœ¼ë¡œ ë‚ ì•„ì˜´
 	pBuf[nbytes] = NULL;
 
-	newPacket = (Packet*)pBuf; // PacketÇüÀ¸·Î ¸¸µê
+	newPacket = (Packet*)pBuf; // Packetí˜•ìœ¼ë¡œ ë§Œë“¦
 
 							   /*CIPAddressCtrl myCtrlIP;
 							   DWORD dwIP;
 							   myCtrlIP.GetAddress(&peerIp);
 							   */
-							   /*std::wcout << (const wchar_t*)peerIp.Format(_T("IPÁÖ¼Ò: %d.%d.%d.%d"),FIRST_IPADDRESS(peerIp),SECOND_IPADDRESS(peerIp),THIRD_IPADDRESS(peerIp),FOURTH_IPADDRESS(peerIp));
-							   << "·Î ºÎÅÍ ÃÑ "<< newPacket->total_sequence_number <<"°³ frame ¼ö½ÅÁß\n=> ";*/
-	std::wcout << (const wchar_t*)peerIp << "·Î ºÎÅÍ ÃÑ " << newPacket->total_sequence_number << "°³ frame ¼ö½ÅÁß\n=> ";
-	std::cout << "ÇöÀç " << newPacket->seq << "¹øÂ° frameµµÂø\n";
+							   /*std::wcout << (const wchar_t*)peerIp.Format(_T("IPì£¼ì†Œ: %d.%d.%d.%d"),FIRST_IPADDRESS(peerIp),SECOND_IPADDRESS(peerIp),THIRD_IPADDRESS(peerIp),FOURTH_IPADDRESS(peerIp));
+							   << "ë¡œ ë¶€í„° ì´ "<< newPacket->total_sequence_number <<"ê°œ frame ìˆ˜ì‹ ì¤‘\n=> ";*/
+	std::wcout << (const wchar_t*)peerIp << "ë¡œ ë¶€í„° ì´ " << newPacket->total_sequence_number << "ê°œ frame ìˆ˜ì‹ ì¤‘\n=> ";
+	std::cout << "í˜„ì¬ " << newPacket->seq << "ë²ˆì§¸ frameë„ì°©\n";
 
-	//¹ŞÀº packet¿¡ ´ëÇÏ¿© 80bit dataÃßÃâ
+	//ë°›ì€ packetì— ëŒ€í•˜ì—¬ 80bit dataì¶”ì¶œ
 	std::string data_temp = "";
 	for (int i = 0; i < sizeof(newPacket->data); ++i) { // sizeof(newPacket->data) == 10
 		std::bitset<8> bits(newPacket->data[i]);
 		data_temp += bits.to_string(); // bitset to string
 	}
-	cout << "ÀÌÁøÈ­µ¥ÀÌÅÍ 80bit :\n" << data_temp << "\n¸¦ ¹Ş¾Ò½À´Ï´Ù.\n\n";
+	cout << "ì´ì§„í™”ë°ì´í„° 80bit :\n" << data_temp << "\në¥¼ ë°›ì•˜ìŠµë‹ˆë‹¤.\n\n";
 
-	packet_receive_buffer.Add(*newPacket); // ¹ŞÀº ÆĞÅ¶¹öÆÛ¿¡ Ãß°¡.
-	if (packet_receive_buffer.GetSize() == newPacket->total_sequence_number) { // 1:1ÀÌ¹Ç·Î ¹ŞÀº°Å¿¡ µé¾îÀÖ´Â°Å ¹Ù·ÎÃ¼Å©ÇØµµµÊ
-																			   // ÃÖ´ë frame¼ö¶û buffer¿¡ ÀúÀåµÈ frame¼ö¶û °°À¸¸é
+	packet_receive_buffer.Add(*newPacket); // ë°›ì€ íŒ¨í‚·ë²„í¼ì— ì¶”ê°€.
+	if (packet_receive_buffer.GetSize() == newPacket->total_sequence_number) { // 1:1ì´ë¯€ë¡œ ë°›ì€ê±°ì— ë“¤ì–´ìˆëŠ”ê±° ë°”ë¡œì²´í¬í•´ë„ë¨
+																			   // ìµœëŒ€ frameìˆ˜ë‘ bufferì— ì €ì¥ëœ frameìˆ˜ë‘ ê°™ìœ¼ë©´
 
-																			   //Packet¿¡ ´ëÇÏ¿© ¿À¸§Â÷¼ø ÄüÁ¤·Ä
+																			   //Packetì— ëŒ€í•˜ì—¬ ì˜¤ë¦„ì°¨ìˆœ í€µì •ë ¬
 		QSortCArray(packet_receive_buffer, ComparePacket);
-		//¹ŞÀºÆĞÅ¶µé¿¡ ´ëÇØ ¸ğµç dataÃßÃâ 80*total_sequence_number bit
+		//ë°›ì€íŒ¨í‚·ë“¤ì— ëŒ€í•´ ëª¨ë“  dataì¶”ì¶œ 80*total_sequence_number bit
 		std::string data_temp = "";
 		for (int k = 0; k<newPacket->total_sequence_number; ++k) {
 			for (int i = 0; i < sizeof(newPacket->data); ++i) { // sizeof(newPacket->data) == 10
@@ -471,12 +481,12 @@ void CUDPClient_thdDlg::ProcessReceive(CDataSocket* pSocket, int nErrorCode)
 		}
 
 		rx_cs.Lock();
-		arg2.pList->AddTail(CString(data_temp.c_str())); // string to CString // ÃßÃâÇÑ data°ª À» ¹öÆÛ¿¡ Ãß°¡
+		arg2.pList->AddTail(CString(data_temp.c_str())); // string to CString // ì¶”ì¶œí•œ dataê°’ ì„ ë²„í¼ì— ì¶”ê°€
 		rx_cs.Unlock();
 
-		packet_receive_buffer.RemoveAll(); // ¹öÆÛºñ¿ì±â
+		packet_receive_buffer.RemoveAll(); // ë²„í¼ë¹„ìš°ê¸°
 
-										   // => ÀÏÁ¤½Ã°£ °°Áö ¾ÊÀ¸¸é error control ÇØ¾ßÇÔ (³ªÁß¿¡ ±¸Çö)
+										   // => ì¼ì •ì‹œê°„ ê°™ì§€ ì•Šìœ¼ë©´ error control í•´ì•¼í•¨ (ë‚˜ì¤‘ì— êµ¬í˜„)
 	}
 	//TCHAR pBuf[1024 + 1];
 	//CString strData;

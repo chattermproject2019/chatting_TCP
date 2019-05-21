@@ -5,13 +5,13 @@ Segmentaion [x]
 
 Reassembly [x]
 
-�ѱ�,���� �� �����ڵ��� ���� [x]
+한글,한자 외 유니코드언어 전송 [x]
 
-" "�Է� ���� [x]
+""입력 제한 [x] //모든 메시지에서 알림이 발생하는 error 
 
-Port �Է¹޴�ĭ ����� []
+Port 입력받는칸 만들기 []
 
-��� IP ��� text box ����� [x]
+상대 IP 출력 text box 만들기 [x]
 
 Checksum []
 

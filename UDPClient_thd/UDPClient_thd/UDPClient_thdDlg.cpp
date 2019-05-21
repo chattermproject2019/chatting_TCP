@@ -396,6 +396,11 @@ void CUDPClient_thdDlg::OnBnClickedSend()
 		peerPort = 6789;
 
 		CString tx_message;
+		if (tx_message == _T("")) {
+
+			AfxMessageBox(_T("내용을 입력하세요!"));
+			return;
+		}
 		m_tx_edit_short.GetWindowText(tx_message);
 		//tx_message += _T("\r\n");
 		tx_cs.Lock();

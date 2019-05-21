@@ -249,7 +249,7 @@ UINT TXThread(LPVOID arg) // 메세지 보내는 스레드
 
 			CString message;
 			pDlg->m_tx_edit.GetWindowText(message);
-			message += "\r\n";
+			//message += "\r\n";
 			pDlg->m_tx_edit.SetWindowTextW(message);
 
 			while (!pDlg->packet_send_buffer.IsEmpty()) { // 패킷버퍼에 뭔가있으면 보냄
@@ -394,6 +394,12 @@ void CUDPServer_thdDlg::OnBnClickedSend()
 	}
 	CString tx_message;
 	m_tx_edit_short.GetWindowText(tx_message);
+	
+	if (tx_message == "") {            //입력창에 메시지가 없으면 에러메시지 발생
+
+		AfxMessageBox(_T("내용을 입력하세요!"));
+		return;
+	}
 	tx_message += _T("\r\n"); //줄바꿈을 추가
 	tx_cs.Lock();
 	arg1.pList->AddTail(tx_message);

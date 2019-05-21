@@ -399,13 +399,14 @@ void CUDPClient_thdDlg::OnBnClickedSend()
 		peerPort = 6789;
 
 		CString tx_message;
-		/*if (tx_message == "") {
+		
+		m_tx_edit_short.GetWindowText(tx_message);
+
+		if (tx_message == "") {            //입력창에 메시지가 없으면 에러메시지 발생
 
 			AfxMessageBox(_T("내용을 입력하세요!"));
 			return;
 		}
-		*/
-		m_tx_edit_short.GetWindowText(tx_message);
 		//tx_message += _T("\r\n");
 		tx_cs.Lock();
 		arg1.pList->AddTail(tx_message);
@@ -416,6 +417,8 @@ void CUDPClient_thdDlg::OnBnClickedSend()
 		int len = m_tx_edit.GetWindowTextLengthW();
 		m_tx_edit.SetSel(len, len);
 		m_tx_edit.ReplaceSel(tx_message);
+		
+		
 	}
 }
 

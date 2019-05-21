@@ -211,6 +211,9 @@ UINT RXThread(LPVOID arg) //RXThread 함수 정의
 
 			CString message;
 			pDlg->m_rx_edit.GetWindowText(message);
+			message += _T("<message from : ");
+			message += CString(pDlg->peerIp);
+			message += _T("> \r\n");
 			message += CString(temp.c_str()); // string to CString
 			message += "\r\n";
 			pDlg->m_rx_edit.SetWindowTextW(message);
@@ -396,11 +399,12 @@ void CUDPClient_thdDlg::OnBnClickedSend()
 		peerPort = 6789;
 
 		CString tx_message;
-		if (tx_message == _T("")) {
+		/*if (tx_message == "") {
 
 			AfxMessageBox(_T("내용을 입력하세요!"));
 			return;
 		}
+		*/
 		m_tx_edit_short.GetWindowText(tx_message);
 		//tx_message += _T("\r\n");
 		tx_cs.Lock();

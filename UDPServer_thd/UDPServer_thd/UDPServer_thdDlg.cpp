@@ -211,6 +211,9 @@ UINT RXThread(LPVOID arg) // 메세지 받으면 저장하는 버퍼에서 값 출력하는 스레드
 
 			CString message;
 			pDlg->m_rx_edit.GetWindowText(message);
+			message += _T("<message from : ");
+			message += CString(pDlg->peerIp);
+			message += _T("> \r\n");
 			message += CString(temp.c_str()); // string to CString
 			message += "\r\n";
 			pDlg->m_rx_edit.SetWindowTextW(message);

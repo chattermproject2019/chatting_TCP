@@ -9,7 +9,7 @@
 class CDataSocket;
 
 struct Packet { // 16byte = 128bit
-	unsigned short seq; // 2yte = 16bit
+	unsigned short seq; // 2byte = 16bit
 	unsigned short checksum; // 2byte = 16bit
 	unsigned short total_sequence_number; // 2byte = 16bit => 총 보내는 frame수
 	unsigned char data[10]; // 10btye = 80bit, 순수 데이터만 80bit = 10byte저장가능

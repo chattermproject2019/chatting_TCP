@@ -134,6 +134,53 @@ std::string BinaryStr_to_CString(std::string binary_message) {
 	return temp;
 }
 
+unsigned short all_char_bitSum(unsigned char* data) {
+
+	register unsigned long sum = 0;
+
+	int len = sizeof(data) / 2;
+
+	while (len--) {        //1바이트를 2번 더해서 2바이트로 본다
+		sum += *data++;
+		sum += *data++;
+	}
+	sum = (sum >> 16) + (sum & 0xffff); //carry + 다 더한 값
+	sum += (sum >> 16);  //sum+carry 더했을 때 다시 carry 발생한 경우 다시 더 함
+	return (unsigned short)(sum);
+
+}
+unsigned short all_short_bitSum(unsigned short* data) {
+
+	register unsigned long sum = 0;
+
+	int len = sizeof(data);
+
+	while (len--) {        //1바이트를 2번 더해서 2바이트로 본다
+		sum += *data++;
+	}
+	sum = (sum >> 16) + (sum & 0xffff); //carry + 다 더한 값
+	sum += (sum >> 16);  //sum+carry 더했을 때 다시 carry 발생한 경우 다시 더 함
+	return (unsigned short)(sum);
+
+}
+
+unsigned short checksum_short(unsigned short* data) {
+
+	register unsigned long sum = 0;
+
+	int len = sizeof(data);
+
+	while (len--) {        //1바이트를 2번 더해서 2바이트로 본다
+		sum += *data++;
+	}
+	sum = (sum >> 16) + (sum & 0xffff); //carry + 다 더한 값
+	sum += (sum >> 16);  //sum+carry 더했을 때 다시 carry 발생한 경우 다시 더 함
+	return (unsigned short)(~sum);
+
+}
+
+
+
 void CUDPClient_thdDlg::packetSegmentation(CString message) {
 
 	std::string binaried = CString_to_BinaryStr(message); // 문자열을 2진수문자열로만듦니다. 길이는 1문자를 8bit씩 나눕니다.
@@ -143,7 +190,7 @@ void CUDPClient_thdDlg::packetSegmentation(CString message) {
 	std::string temp = "";
 
 	unsigned short total_packet;
-	if (binaried.length() % 80 == 0) {
+	if (binaried.length() % 80 == 0) { 
 		total_packet = binaried.length() / 80;
 	}
 	else {
@@ -161,7 +208,13 @@ void CUDPClient_thdDlg::packetSegmentation(CString message) {
 			packet_data_count++;
 			temp = "";
 			if (packet_data_count == 10) { // 매번 80번째 bit를 추가할때마다 이때까지 저장한 packet을 packet buffer에 저장합니다.
+				
+				unsigned short header[3] = { newPacket.seq, newPacket.total_sequence_number, newPacket.checksum }; //
+				unsigned short header2[2] = { all_char_bitSum(newPacket.data), all_short_bitSum(header) };
 				newPacket.seq = ++seq; // seq넘버도 추가
+				newPacket.checksum = 0;
+				//newPacket.checksum = checksum_short(header2);
+				//cout << "보낼거 계산한 체크삼: "<<newPacket.checksum<<"\n";
 				newPacket.total_sequence_number = total_packet; // 문자열 이진화한거를 80bit로 나누면 총 보낼 frame개수나옴
 				packet_send_buffer.Add(newPacket); //버퍼에 패킷 추가
 				newPacket = Packet(); // 새 패킷할당
@@ -468,6 +521,13 @@ void CUDPClient_thdDlg::ProcessReceive(CDataSocket* pSocket, int nErrorCode)
 	std::wcout << (const wchar_t*)peerIp << "로 부터 총 " << newPacket->total_sequence_number << "개 frame 수신중\n=> ";
 	std::cout << "현재 " << newPacket->seq << "번째 frame도착\n";
 
+	unsigned short header[3] = { newPacket->seq, newPacket->total_sequence_number, newPacket->checksum };
+	unsigned short header2[2] = { all_char_bitSum(newPacket->data), all_short_bitSum(header) };
+	int checksum_receive = checksum_short(header2);
+	if (checksum_receive != 0) {
+		cout << "수신패킷 에러. \n 받은 checksum이 " << checksum_receive << "입니다.\n";
+		return;
+	}
 	//받은 packet에 대하여 80bit data추출
 	std::string data_temp = "";
 	for (int i = 0; i < sizeof(newPacket->data); ++i) { // sizeof(newPacket->data) == 10
@@ -484,7 +544,7 @@ void CUDPClient_thdDlg::ProcessReceive(CDataSocket* pSocket, int nErrorCode)
 		QSortCArray(packet_receive_buffer, ComparePacket);
 		//받은패킷들에 대해 모든 data추출 80*total_sequence_number bit
 		std::string data_temp = "";
-		for (int k = 0; k<newPacket->total_sequence_number; ++k) {
+		for (int k = 0; k < newPacket->total_sequence_number; ++k) {
 			for (int i = 0; i < sizeof(newPacket->data); ++i) { // sizeof(newPacket->data) == 10
 				std::bitset<8> bits(packet_receive_buffer.GetAt(k).data[i]);
 				std::cout << bits << "\n";
@@ -500,20 +560,5 @@ void CUDPClient_thdDlg::ProcessReceive(CDataSocket* pSocket, int nErrorCode)
 
 										   // => 일정시간 같지 않으면 error control 해야함 (나중에 구현)
 	}
-	//TCHAR pBuf[1024 + 1];
-	//CString strData;
-	//int nbytes = 0;
-	//memset(pBuf, 0, 1024 * 2);
-
-	//nbytes = pSocket->Receive(pBuf, 1024);
-	//pBuf[nbytes] = NULL;
-	//strData = (LPCTSTR)pBuf;
-
-	////CString SocketAddress = serverIp;
-	////UINT SocketPort = ;
-	////memset(pBuf, 0, 1025 * 2);
-
-	//rx_cs.Lock();
-	//arg2.pList->AddTail((LPCTSTR)strData);
-	//rx_cs.Unlock();
 }
+

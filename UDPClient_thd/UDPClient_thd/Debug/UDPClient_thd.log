@@ -1,10 +1,10 @@
 ﻿  UDPClient_thdDlg.cpp
 c:\users\samsung\desktop\termproject\chatting_tcp\udpclient_thd\udpclient_thd\udpclient_thddlg.cpp(98): warning C4554: '&': 연산자 우선 순위에 오류가 있는지 확인하십시오. 괄호를 사용하여 우선 순위를 명확하게 지정하십시오.
-c:\users\samsung\desktop\termproject\chatting_tcp\udpclient_thd\udpclient_thd\udpclient_thddlg.cpp(147): warning C4267: '=': 'size_t'에서 'unsigned short'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-c:\users\samsung\desktop\termproject\chatting_tcp\udpclient_thd\udpclient_thd\udpclient_thddlg.cpp(150): warning C4267: '=': 'size_t'에서 'unsigned short'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-c:\users\samsung\desktop\termproject\chatting_tcp\udpclient_thd\udpclient_thd\udpclient_thddlg.cpp(156): warning C4018: '<': signed 또는 unsigned가 일치하지 않습니다.
-c:\users\samsung\desktop\termproject\chatting_tcp\udpclient_thd\udpclient_thd\udpclient_thddlg.cpp(160): warning C4244: '=': 'unsigned long'에서 'unsigned char'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-c:\users\samsung\desktop\termproject\chatting_tcp\udpclient_thd\udpclient_thd\udpclient_thddlg.cpp(175): warning C4244: '=': 'unsigned long'에서 'unsigned char'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+c:\users\samsung\desktop\termproject\chatting_tcp\udpclient_thd\udpclient_thd\udpclient_thddlg.cpp(194): warning C4267: '=': 'size_t'에서 'unsigned short'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+c:\users\samsung\desktop\termproject\chatting_tcp\udpclient_thd\udpclient_thd\udpclient_thddlg.cpp(197): warning C4267: '=': 'size_t'에서 'unsigned short'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+c:\users\samsung\desktop\termproject\chatting_tcp\udpclient_thd\udpclient_thd\udpclient_thddlg.cpp(203): warning C4018: '<': signed 또는 unsigned가 일치하지 않습니다.
+c:\users\samsung\desktop\termproject\chatting_tcp\udpclient_thd\udpclient_thd\udpclient_thddlg.cpp(207): warning C4244: '=': 'unsigned long'에서 'unsigned char'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+c:\users\samsung\desktop\termproject\chatting_tcp\udpclient_thd\udpclient_thd\udpclient_thddlg.cpp(228): warning C4244: '=': 'unsigned long'에서 'unsigned char'(으)로 변환하면서 데이터가 손실될 수 있습니다.
 stdafx.obj : warning LNK4258: '/entry:WinMainCRTStartup' 지시문은 '/ENTRY:wWinMainCRTStartup' 스위치와 호환되지 않습니다. 무시됩니다.
   UDPClient_thd.vcxproj -> C:\Users\SAMSUNG\Desktop\Termproject\chatting_TCP\UDPClient_thd\Debug\UDPClient_thd.exe
   UDPClient_thd.vcxproj -> C:\Users\SAMSUNG\Desktop\Termproject\chatting_TCP\UDPClient_thd\Debug\UDPClient_thd.pdb (Partial PDB)

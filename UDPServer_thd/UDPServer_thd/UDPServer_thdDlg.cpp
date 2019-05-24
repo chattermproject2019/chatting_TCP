@@ -96,17 +96,8 @@ std::string CString_to_BinaryStr(CString message) { // CString 으로 반환하면 hex
 	int i;
 	for (; *ptr != 0; ++ptr)
 	{
-		if (*ptr & 0x80 == 0x80) { // 한글, 한자일때
-			for (i = 7; i >= 0; --i) // 8bit
-				temp2 += (*ptr & 1 << i) ? ("1") : ("0");
-			++ptr;
-			for (i = 7; i >= 0; --i) // 8bit
-				temp2 += (*ptr & 1 << i) ? ("1") : ("0");
-		}
-		else { // 아스키코드로 표현가능할때
-			for (i = 7; i >= 0; --i) // 8bit
-				temp2 += (*ptr & 1 << i) ? ("1") : ("0");
-		}
+		for (i = 7; i >= 0; --i) // 8bit
+			temp2 += (*ptr & 1 << i) ? ("1") : ("0");
 	}
 	//std::cout<<"이진화된 문자는" << temp2 << "입니다.\n\n";
 
@@ -135,49 +126,19 @@ std::string BinaryStr_to_CString(std::string binary_message) {
 	return temp;
 }
 
-unsigned short all_char_bitSum(unsigned char* data) {
-
-	register unsigned long sum = 0;
-
-	int len = sizeof(data) / 2;
-
-	while (len--) {        //1바이트를 2번 더해서 2바이트로 본다
-		sum += *data++;
-		sum += *data++;
+unsigned short checksum_packet(unsigned short* packet, int length) {
+	unsigned long sum = 0;
+	unsigned long carry;
+	for (int i = 0; i<length; i++)
+	{
+		sum += packet[i];
 	}
-	sum = (sum >> 16) + (sum & 0xffff); //carry + 다 더한 값
-	sum += (sum >> 16);  //sum+carry 더했을 때 다시 carry 발생한 경우 다시 더 함
-	return (unsigned short)(sum);
+	carry = (sum) >> 16;
+	sum = sum & 0xffff;
+	sum += carry;
 
-}
-unsigned short all_short_bitSum(unsigned short* data) {
-
-	register unsigned long sum = 0;
-
-	int len = sizeof(data);
-
-	while (len--) {        //1바이트를 2번 더해서 2바이트로 본다
-		sum += *data++;
-	}
-	sum = (sum >> 16) + (sum & 0xffff); //carry + 다 더한 값
-	sum += (sum >> 16);  //sum+carry 더했을 때 다시 carry 발생한 경우 다시 더 함
-	return (unsigned short)(sum);
-
-}
-
-unsigned short checksum_short(unsigned short* data) {
-
-	register unsigned long sum = 0;
-
-	int len = sizeof(data);
-
-	while (len--) {        //1바이트를 2번 더해서 2바이트로 본다
-		sum += *data++;
-	}
-	sum = (sum >> 16) + (sum & 0xffff); //carry + 다 더한 값
-	sum += (sum >> 16);  //sum+carry 더했을 때 다시 carry 발생한 경우 다시 더 함
-	return (unsigned short)(~sum);
-
+	unsigned short result = (unsigned short)(~(sum & 0xffff));
+	return result;
 }
 
 void CUDPServer_thdDlg::packetSegmentation(CString message) {
@@ -207,12 +168,14 @@ void CUDPServer_thdDlg::packetSegmentation(CString message) {
 			packet_data_count++;
 			temp = "";
 			if (packet_data_count == 10) { // 매번 80번째 bit를 추가할때마다 이때까지 저장한 packet을 packet buffer에 저장합니다.
-				unsigned short header[3] = { newPacket.seq, newPacket.total_sequence_number, newPacket.checksum }; //
-				unsigned short header2[2] = { all_char_bitSum(newPacket.data), all_short_bitSum(header) };
 				newPacket.seq = ++seq; // seq넘버도 추가
-				newPacket.checksum = 0;
-				newPacket.checksum = checksum_short(header2);
 				newPacket.total_sequence_number = total_packet; // 문자열 이진화한거를 80bit로 나누면 총 보낼 frame개수나옴
+				
+				newPacket.checksum = 0;
+				unsigned short* short_packet = (unsigned short*)&newPacket;
+				newPacket.checksum = checksum_packet(short_packet, sizeof(short_packet) / sizeof(short_packet[0]));
+				printf("보내려는 패킷의 체크섬 %x", newPacket.checksum);
+
 				packet_send_buffer.Add(newPacket); //버퍼에 패킷 추가
 				newPacket = Packet(); // 새 패킷할당
 				packet_data_count = 0;
@@ -224,6 +187,12 @@ void CUDPServer_thdDlg::packetSegmentation(CString message) {
 		std::bitset<8> bits(temp); // ex) "10101010" => 숫자 170 == 0b10101010
 		newPacket.data[packet_data_count % 10] = bits.to_ulong(); //data[0]~data[9]에 대해서 8bit(1byte)씩 숫자로 저장
 		newPacket.total_sequence_number = total_packet; // 이녀석은 위에 for문돌때 packet못보내므로 최대 frame개수는 1
+		
+		newPacket.checksum = 0;
+		unsigned short* short_packet = (unsigned short*)&newPacket;
+		newPacket.checksum = checksum_packet(short_packet, sizeof(short_packet) / sizeof(short_packet[0]));
+		printf("보내려는 패킷의 체크섬 %x", newPacket.checksum);
+		
 		packet_send_buffer.Add(newPacket); //버퍼에 패킷 추가
 	}
 
@@ -449,7 +418,7 @@ void CUDPServer_thdDlg::OnBnClickedSend()
 		AfxMessageBox(_T("내용을 입력하세요!"));
 		return;
 	}
-	tx_message += _T("\r\n"); //줄바꿈을 추가
+	//tx_message += _T("\r\n"); //줄바꿈을 추가
 	tx_cs.Lock();
 	arg1.pList->AddTail(tx_message);
 	tx_cs.Unlock();
@@ -493,23 +462,8 @@ void CUDPServer_thdDlg::ProcessReceive(CDataSocket* pSocket, int nErrorCode)
 
 	newPacket = (Packet*)pBuf; // Packet형으로 만듦
 
-	/*CIPAddressCtrl myCtrlIP;
-	DWORD dwIP;
-	myCtrlIP.GetAddress(&peerIp);
-*/
-	/*std::wcout << (const wchar_t*)peerIp.Format(_T("IP주소: %d.%d.%d.%d"),FIRST_IPADDRESS(peerIp),SECOND_IPADDRESS(peerIp),THIRD_IPADDRESS(peerIp),FOURTH_IPADDRESS(peerIp));
-	<< "로 부터 총 "<< newPacket->total_sequence_number <<"개 frame 수신중\n=> ";*/
 	std::wcout << (const wchar_t*)peerIp<< "로 부터 총 "<< newPacket->total_sequence_number <<"개 frame 수신중\n=> ";
 	std::cout<<"현재 " <<newPacket->seq<<"번째 frame도착\n";	
-
-	unsigned short header[3] = { newPacket->seq, newPacket->total_sequence_number, newPacket->checksum };
-	unsigned short header2[2] = { all_char_bitSum(newPacket->data), all_short_bitSum(header) };
-	int checksum_receive = checksum_short(header2);
-	cout << "받은거 계산한 체크삼: " << checksum_receive << "\n";
-	if (checksum_receive != 0) {
-		cout << "수신패킷 에러. \n 받은 checksum이 " << newPacket->checksum<< "입니다.\n";
-		//return;
-	}
 
 	//받은 packet에 대하여 80bit data추출
 	std::string data_temp = "";
@@ -519,6 +473,13 @@ void CUDPServer_thdDlg::ProcessReceive(CDataSocket* pSocket, int nErrorCode)
 		data_temp += bits.to_string(); // bitset to string
 	}
 	cout << "이진화데이터 80bit :\n" << data_temp << "\n를 받았습니다.\n\n";
+
+	unsigned short* short_packet = (unsigned short*)newPacket;
+	printf("받은 패킷의 체크섬 %x, 계산한 체크섬 값: %x \n", newPacket->checksum, checksum_packet(short_packet, sizeof(short_packet) / sizeof(short_packet[0])));
+	if (checksum_packet(short_packet, sizeof(short_packet) / sizeof(short_packet[0])) != 0) {
+		cout << "받았지만 checksum 에러입니다.\n";
+		/*에러 컨트롤*/
+	}
 
 	packet_receive_buffer.Add(*newPacket); // 받은 패킷버퍼에 추가.
 	if (packet_receive_buffer.GetSize() == newPacket->total_sequence_number) { // 1:1이므로 받은거에 들어있는거 바로체크해도됨

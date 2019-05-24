@@ -143,17 +143,17 @@ unsigned short checksum_packet(unsigned short* packet, int length) { // checksum
 void CUDPClient_thdDlg::packetSegmentation(CString message) {
 
 	std::string binaried = CString_to_BinaryStr(message); // 문자열을 2진수문자열로만듦니다. 길이는 1문자를 8bit씩 나눕니다.
-	// 각 문자를 8bit크기로 이진화하였으므로, Packet의 data에는 80bit즉 10개의 문자를 저장하여 보낼 수 있습니다.
+	// 각 문자를 8bit크기로 이진화하였으므로, Packet의 data에는 48bit즉 10개의 문자를 저장하여 보낼 수 있습니다.
 	std::wcout<<"보내시려는 메세지 :" << (const wchar_t*)message << " 는 \n"; //CString은 wcout으로 출력해야 16진수로 안나옴
 	std::cout << "이진수로 " << binaried << "입니다\n";
 	std::string temp = "";
 
 	unsigned short total_packet;
-	if (binaried.length() % 80 == 0) { 
-		total_packet = binaried.length() / 80;
+	if (binaried.length() % 48 == 0) { 
+		total_packet = binaried.length() / 48;
 	}
 	else {
-		total_packet = (binaried.length() / 80) + 1;
+		total_packet = (binaried.length() / 48) + 1;
 	}
 
 	Packet newPacket = Packet();
@@ -166,7 +166,7 @@ void CUDPClient_thdDlg::packetSegmentation(CString message) {
 			newPacket.data[packet_data_count % 10] = bits.to_ulong(); //data[0]~data[9]에 대해서 8bit(1byte)씩 숫자로 저장
 			packet_data_count++;
 			temp = "";
-			if (packet_data_count == 10) { // 매번 80번째 bit를 추가할때마다 이때까지 저장한 packet을 packet buffer에 저장합니다.
+			if (packet_data_count == 6) { // 매번 80번째 bit를 추가할때마다 이때까지 저장한 packet을 packet buffer에 저장합니다.
 				
 				newPacket.seq = ++seq; // seq넘버도 추가
 				newPacket.total_sequence_number = total_packet; // 문자열 이진화한거를 80bit로 나누면 총 보낼 frame개수나옴
@@ -174,7 +174,7 @@ void CUDPClient_thdDlg::packetSegmentation(CString message) {
 				newPacket.checksum = 0;
 				unsigned short* short_packet = (unsigned short*)&newPacket;
 				newPacket.checksum = checksum_packet(short_packet, sizeof(short_packet) / sizeof(short_packet[0]));
-				printf("보내려는 패킷의 체크섬 %x", newPacket.checksum);
+				printf("보내려는 패킷의 체크섬 %x\n", newPacket.checksum);
 				
 				packet_send_buffer.Add(newPacket); //버퍼에 패킷 추가
 				newPacket = Packet(); // 새 패킷할당

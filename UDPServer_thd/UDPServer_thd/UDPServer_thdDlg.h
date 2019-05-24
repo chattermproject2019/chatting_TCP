@@ -5,13 +5,21 @@
 #pragma once
 #include "afxwin.h"
 
+struct Response { // 4byte, 수신에 대한 응답에 대한 정보이다. stop&wait, Go&Back, Selective Reject에 쓰인다.
+	unsigned short ACK; // n번 frame에 대한 확인응답, frame받고 해당 frame의 seq를전송, seq는 항상 1부터 시작.
+	bool no_error; // negative Ack로 할것인지 결정. true면 에러가 없는거고. false는 frame에 에러가 있었음을 알림.
+	bool more; // RR인지 REJ인지 구별// true이면 더 수신가능함을, false이면 지금은 더 이상 수신안되고, 좀있다가 시도해줄것을 알림.
+
+	Response() { ACK = 0; no_error = more = true; } // ACK 0이면 frame정보가 초기화되지 않은거임. seq는 1부터 시작하니깐
+};
 
 struct Packet { // 16byte = 128bit
-	unsigned short seq; // 2yte = 16bit
+	unsigned short seq; // 2yte = 16bit, 
 	unsigned short checksum; // 2byte = 16bit
 	unsigned short total_sequence_number; // 2byte = 16bit => 총 보내는 frame수
-	unsigned char data[10]; // 10btye = 80bit, 순수 데이터만 80bit = 10byte저장가능
-	Packet() { seq = 1; checksum = 0; total_sequence_number = 0; memset(data, 0, sizeof(data)); }
+	Response response; // 4byte, 응답메세지이다. 
+	unsigned char data[6]; // 6btye = 48bit, 순수 데이터만 48bit = 6byte저장가능
+	Packet() { seq = 1; response = Response(); checksum = 0; total_sequence_number = 0; memset(data, 0, sizeof(data)); }
 };
 
 struct ThreadArg //스레드 정의

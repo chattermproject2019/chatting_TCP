@@ -150,11 +150,11 @@ void CUDPServer_thdDlg::packetSegmentation(CString message) {
 	std::string temp = "";
 
 	unsigned short total_packet;
-	if (binaried.length() % 80 == 0) {
-		total_packet = binaried.length() / 80;
+	if (binaried.length() % 48 == 0) {
+		total_packet = binaried.length() / 48;
 	}
 	else {
-		total_packet = (binaried.length() / 80) + 1;
+		total_packet = (binaried.length() / 48) + 1;
 	}
 
 	Packet newPacket = Packet();
@@ -167,14 +167,14 @@ void CUDPServer_thdDlg::packetSegmentation(CString message) {
 			newPacket.data[packet_data_count % 10] = bits.to_ulong(); //data[0]~data[9]에 대해서 8bit(1byte)씩 숫자로 저장
 			packet_data_count++;
 			temp = "";
-			if (packet_data_count == 10) { // 매번 80번째 bit를 추가할때마다 이때까지 저장한 packet을 packet buffer에 저장합니다.
+			if (packet_data_count == 6) { // 매번 48번째 bit를 추가할때마다 이때까지 저장한 packet을 packet buffer에 저장합니다.
 				newPacket.seq = ++seq; // seq넘버도 추가
 				newPacket.total_sequence_number = total_packet; // 문자열 이진화한거를 80bit로 나누면 총 보낼 frame개수나옴
 				
 				newPacket.checksum = 0;
 				unsigned short* short_packet = (unsigned short*)&newPacket;
 				newPacket.checksum = checksum_packet(short_packet, sizeof(short_packet) / sizeof(short_packet[0]));
-				printf("보내려는 패킷의 체크섬 %x", newPacket.checksum);
+				printf("보내려는 패킷의 체크섬 %x\n", newPacket.checksum);
 
 				packet_send_buffer.Add(newPacket); //버퍼에 패킷 추가
 				newPacket = Packet(); // 새 패킷할당
@@ -487,10 +487,10 @@ void CUDPServer_thdDlg::ProcessReceive(CDataSocket* pSocket, int nErrorCode)
 		
 		//Packet에 대하여 오름차순 퀵정렬
 		QSortCArray(packet_receive_buffer, ComparePacket);
-		//받은패킷들에 대해 모든 data추출 80*total_sequence_number bit
+		//받은패킷들에 대해 모든 data추출 48*total_sequence_number bit
 		std::string data_temp = "";
 		for(int k=0; k<newPacket->total_sequence_number; ++k){ 
-			for (int i = 0; i < sizeof(newPacket->data); ++i) { // sizeof(newPacket->data) == 10
+			for (int i = 0; i < sizeof(newPacket->data); ++i) { // sizeof(newPacket->data) == 6
 				std::bitset<8> bits(packet_receive_buffer.GetAt(k).data[i]);
 				std::cout << bits << "\n";
 				data_temp += bits.to_string(); // bitset to string

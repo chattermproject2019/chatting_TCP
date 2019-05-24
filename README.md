@@ -13,7 +13,7 @@ Port 입력받는칸 만들기 []
 
 상대 IP 출력 text box 만들기 [x]
 
-Checksum []
+Checksum [x]
 
 -ARQ
 

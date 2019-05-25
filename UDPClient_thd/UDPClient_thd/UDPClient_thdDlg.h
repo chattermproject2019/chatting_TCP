@@ -25,11 +25,19 @@ struct Packet { // 16byte = 128bit
 	Packet() { seq = 1; response = Response(); checksum = 0; total_sequence_number = 0; memset(data, 0, sizeof(data)); }
 };
 
-struct ThreadArg //스레드 정의
+struct ThreadArg //스레드 인수 정의
 {
 	CStringList* pList;
 	CDialogEx* pDlg;
 	int Thread_run; //스레드 제어 변수
+};
+
+struct timerThreadArg //타이머 스레드 인수 정의
+{
+	int timer_id;
+	int deadline;
+	int frame_seq;
+	CDialogEx* pDlg;
 };
 
 // CUDPClient_thdDlg 대화 상자
@@ -59,8 +67,11 @@ protected:
 	afx_msg HCURSOR OnQueryDragIcon();
 	DECLARE_MESSAGE_MAP()
 public:
-	CWinThread *pThread1, *pThread2; //스레드 객체 주소
+	CWinThread *pThread1, *pThread2, *timerThread; //스레드 객체 주소
 	ThreadArg arg1, arg2; //스레드 전달 인자
+	timerThreadArg arg3; // 타이머 스레드 인수
+
+
 	CDataSocket *m_pDataSocket;
 	CEdit m_tx_edit_short;
 	CEdit m_tx_edit;
@@ -76,6 +87,15 @@ public:
 	int peerPort;
 	CArray<Packet> packet_send_buffer; // 보낼 패킷을 저장해 놓는 버퍼
 	CArray<Packet> packet_receive_buffer; // 받은 패킷을 저장해 놓는 버퍼
+	CArray<int> ack_receive_buffer; // 받은 ack메세지의 frame넘버를 저장해 놓는 버퍼입니다. 음수면 nack의 frame넘버입니다.
 
 	void packetSegmentation(CString);
+	 
+	afx_msg void OnTimer(UINT_PTR nIDEvent); // 타이머 용, 클래스 뷰에서 WM_Timer 추가하면됨
+	void StartTimer(unsigned int timer_id, unsigned int n); // 타이머 시작
+	void StopTimer(unsigned int timer_id); // 타이머 끄기
+
+	BOOL timeout = false;
+	//int next_sequnce; //  다음으로 보낼 frame 넘버를 저장하는 변수, frame을 보낼때, 잘 보냈거나, 에러가 나면, 보내야하는 sequence가 달라지기 때문에,  
+
 };

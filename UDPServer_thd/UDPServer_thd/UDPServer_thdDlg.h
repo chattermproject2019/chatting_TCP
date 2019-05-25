@@ -29,6 +29,14 @@ struct ThreadArg //스레드 정의
 	int Thread_run; //스레드 제어 변수
 };
 
+struct timerThreadArg //타이머 스레드 인수 정의
+{
+	int timer_id;
+	int deadline;
+	int frame_seq;
+	CDialogEx* pDlg;
+};
+
 class CDataSocket;
 
 // CUDPServer_thdDlg 대화 상자
@@ -63,8 +71,9 @@ public:
 	CEdit m_tx_edit;
 	CEdit m_rx_edit;
 	afx_msg void OnBnClickedSend();
-	CWinThread *pThread1, *pThread2; //스레드 객체 줏소
+	CWinThread *pThread1, *pThread2, *timerThread; //스레드 객체 주소
 	ThreadArg arg1, arg2; //스레드 전달 인자
+	timerThreadArg arg3; // 타이머 스레드 인수
 	CDataSocket *m_pDataSocket;
 	void ProcessReceive(CDataSocket* pSocket, int nErrorCode);
 	afx_msg void OnBnClickedDisconnect();
@@ -79,5 +88,12 @@ public:
 
 	CArray<Packet> packet_receive_buffer; // 받은 패킷을 저장해 놓는 버퍼
 	
+	CArray<int> ack_receive_buffer; // 받은 ack메세지의 frame넘버를 저장해 놓는 버퍼입니다. 음수면 nack의 frame넘버입니다.
+
 	void packetSegmentation(CString message);
+	afx_msg void OnTimer(UINT_PTR nIDEvent);
+	void StartTimer(unsigned int timer_id, unsigned int n); // 타이머 시작
+	void StopTimer(unsigned int timer_id); // 타이머 끄기
+
+	BOOL timeout = false;
 };

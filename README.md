@@ -17,9 +17,9 @@ Checksum [x]
 
 -ARQ
 
-Timer_thread []
+Timer_thread [x]
 
-Stop and Wait []
+Stop and Wait [x]
 
 Go Back N []
 
@@ -28,3 +28,5 @@ Selective Reject []
 File Transmission []
 
 Error ratio test []
+
+√÷¿˚»≠ []

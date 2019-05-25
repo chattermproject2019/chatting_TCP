@@ -19,11 +19,20 @@ CDataSocket::~CDataSocket()
 
 
 // CDataSocket ¸â¹ö ÇÔ¼ö
-
-
-
-
-
+BOOL CDataSocket::OnMessagePending()
+{
+	MSG Message;
+	if (::PeekMessage(&Message, NULL, WM_TIMER, WM_TIMER, PM_NOREMOVE))
+	{
+		if (Message.wParam == 10)
+		{
+			::PeekMessage(&Message, NULL, WM_TIMER, WM_TIMER, PM_REMOVE);
+			CancelBlockingCall();
+			Close();
+		}
+	}
+	return CSocket::OnMessagePending();
+}
 
 
 void CDataSocket::OnReceive(int nErrorCode)

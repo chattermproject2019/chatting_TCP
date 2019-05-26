@@ -21,6 +21,8 @@ Timer_thread [x]
 
 Stop and Wait [x]
 
+Sliding_window [x]
+
 Go Back N []
 
 Selective Reject []

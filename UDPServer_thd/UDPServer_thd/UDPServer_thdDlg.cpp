@@ -302,7 +302,7 @@ UINT TXThread(LPVOID arg) // 메세지 보내는 스레드
 
 				pDlg->timerThread = AfxBeginThread(timer_thread_func, (LPVOID)&pDlg->arg3, NULL);
 
-				pDlg->StartTimer(timer_id, pDlg->arg3.deadline); // 타이머 시작, deadline주기로 OnTime함수 실행
+				//pDlg->StartTimer(timer_id, pDlg->arg3.deadline); // 타이머 시작, deadline주기로 OnTime함수 실행
 
 				while (pDlg->ack_receive_buffer.IsEmpty()) { // ack버퍼가 비어있음.
 					if (pDlg->timeout == true) { // 버퍼에 아무것도 없는 상태로, 시간지나면 expire
@@ -377,7 +377,7 @@ BOOL CUDPServer_thdDlg::OnInitDialog()
 
 	// TODO: 여기에 추가 초기화 작업을 추가합니다.
 
-	
+	window_size = 1;
 
 
 	CString myIp = _T("127.0.0.1");
@@ -547,11 +547,11 @@ void CUDPServer_thdDlg::ProcessReceive(CDataSocket* pSocket, int nErrorCode)
 	if (calculatedChecksum != 0) { // checksum 에러이면
 		std::cout << "체크섬 에러입니다.\n";
 		
-		/*stop & wait 에러 컨트롤*/
-		if (newPacket->response.ACK != 0) { // ACK로 추정되는 메세지가 checksum에러일 경우. 무시해서 expire되게한다.
-			return;
+		/*에러 컨트롤*/
+		if (newPacket->response.ACK != 0) { // (n)ACK로 추정되는 메세지가 checksum에러일 경우. 무시해서 expire되게한다.
+			//무시 => timeout시킴 (piggy back인데, 데이터도 없는경우 그냥 무시된다는 뜻. )
 		}
-		else{ // 에러인데 ACK메세지가 아니라고 추정되면, 데이터패킷이 에러인걸로 간주하고 NACK메세지를 보낸다.
+		if( newPacket->seq!=0 ){ // 에러인데 ACK메세지가 아니라고 추정되면, 데이터부분이 에러인걸로 간주하고 NACK메세지를 보낸다.
 			AckPacket.response.ACK = newPacket->seq; //받은 패킷번호
 			AckPacket.response.more = true; // 더 수신가능
 			AckPacket.response.no_error = false; // 에러없음이 거짓
@@ -559,22 +559,21 @@ void CUDPServer_thdDlg::ProcessReceive(CDataSocket* pSocket, int nErrorCode)
 			AckPacket.checksum = 0;
 			unsigned short* short_packet = (unsigned short*)&AckPacket;
 			AckPacket.checksum = checksum_packet(short_packet, sizeof(short_packet) / sizeof(short_packet[0]));
-			printf("보내려는 nack 패킷의 체크섬 %x", AckPacket.checksum);
+			printf("보내려는 nack 패킷의 체크섬 %x\n", AckPacket.checksum);
 
 			Data_socket_cs.Lock();
 			std::cout << newPacket->seq << " 번 frame에 대한 nack메세지를 보냅니다.\n";
 			m_pDataSocket->SendToEx((char*)&AckPacket, sizeof(Packet), peerPort, peerIp, 0);
 			Data_socket_cs.Unlock();
 
-			return; // 에러이고, ACK메세지도 아닌것으로 추정. 데이터 에러이므로 NACK보내고, 버림.
+			//return; // 에러이고, ACK메세지도 아닌것으로 추정. 데이터 에러이므로 NACK보내고, 버림.
 		}
 
 	}
 	else { // checksum에러가 없음
 
-		/*Stop & Wait는 piggy back안할 것이므로 ack 또는 data용으로 구별*/
 		
-		/*Stop & Wait ACK메세지 수신하는 경우*/
+		/*에러없는 ACK메세지 수신하는 경우*/
 		if (newPacket->response.ACK != 0) {
 			std::cout << "ACK메세지도착: 에러여부: " << newPacket->response.no_error << " 해당frame 번호: " << newPacket->response.ACK << " 계속수신가능여부: " << newPacket->response.no_error << "\n";
 
@@ -585,13 +584,26 @@ void CUDPServer_thdDlg::ProcessReceive(CDataSocket* pSocket, int nErrorCode)
 			else { // NACK
 				ack_receive_buffer.Add(-1 * newPacket->response.ACK); // 오류로 받은 frame넘버를 저장. 음수로
 			}
-			return; //piggy back아니므로 ack만 확인하고 버림
+	
 		}
 
-		else { // ack메세지 아니므로 data 수신처리 
+		/*에러없는 데이터 수신 */
+		if (newPacket->seq!=0) {  
 
+			//받은 packet에 대하여 48bit data추출
+			std::string data_temp = "";
 
-			if (newPacket->seq != 0) { // 데이터를 받았으면, 확인메세지를 보냅니다.
+			for (int i = 0; i < sizeof(newPacket->data); ++i) { // sizeof(newPacket->data) == 10
+				std::bitset<8> bits(newPacket->data[i]);
+				data_temp += bits.to_string(); // bitset to string
+			}
+			cout << "이진화데이터 48bit :\n" << data_temp << "\n를 받았습니다.\n\n";
+
+			packet_receive_buffer.Add(*newPacket); // 받은 패킷버퍼에 추가.
+			std::cout << "현재 receive packet 버퍼 사이즈는 " << packet_receive_buffer.GetSize() << "입니다.\n";
+			
+
+			if (packet_receive_buffer.GetSize() == window_size) { // window size만큼 수신연속으로 수신했으면 확인메세지를 보냅니다.
 				AckPacket.response.ACK = newPacket->seq; //받은 패킷번호
 				AckPacket.response.more = true; // 더 수신가능
 				AckPacket.response.no_error = true; // 에러없음
@@ -602,38 +614,23 @@ void CUDPServer_thdDlg::ProcessReceive(CDataSocket* pSocket, int nErrorCode)
 				printf("보내려는 ack 패킷의 체크섬 %x", AckPacket.checksum);
 
 				Data_socket_cs.Lock();
-				std::cout << newPacket->seq << " 번 frame에 대한 ack메세지를 보냅니다.\n";
+				std::cout << newPacket->seq << " 번 frame 까지에 대한 ack메세지를 보냅니다.\n";
 				m_pDataSocket->SendToEx((char*)&AckPacket, sizeof(Packet), peerPort, peerIp, 0);
 				Data_socket_cs.Unlock();
 			}
 
-			//받은 packet에 대하여 48bit data추출
-
-			std::string data_temp = "";
-
-			for (int i = 0; i < sizeof(newPacket->data); ++i) { // sizeof(newPacket->data) == 10
-				std::bitset<8> bits(newPacket->data[i]);
-				data_temp += bits.to_string(); // bitset to string
-			}
-			cout << "이진화데이터 48bit :\n" << data_temp << "\n를 받았습니다.\n\n";
-
-
-			packet_receive_buffer.Add(*newPacket); // 받은 패킷버퍼에 추가.
 			if (packet_receive_buffer.GetSize() == newPacket->total_sequence_number) { // 1:1이므로 받은거에 들어있는거 바로체크해도됨
-																					   // 최대 frame수랑 buffer에 저장된 frame수랑 같으면
-
-																					   //Packet에 대하여 오름차순 퀵정렬
+				// 최대 frame수랑 buffer에 저장된 frame수랑 같으면																   //Packet에 대하여 오름차순 퀵정렬
 				QSortCArray(packet_receive_buffer, ComparePacket);
 				//받은패킷들에 대해 모든 data추출 48*total_sequence_number bit
 				std::string data_temp = "";
-				for (int k = 0; k < newPacket->total_sequence_number; ++k) {
+				for (int k = 0; k < packet_receive_buffer.GetSize(); ++k) {
 					for (int i = 0; i < sizeof(newPacket->data); ++i) { // sizeof(newPacket->data) == 6
 						std::bitset<8> bits(packet_receive_buffer.GetAt(k).data[i]);
 						std::cout << bits << "\n";
 						data_temp += bits.to_string(); // bitset to string
 					}
 				}
-
 				rx_cs.Lock();
 				arg2.pList->AddTail(CString(data_temp.c_str())); // string to CString // 추출한 data값 을 버퍼에 추가
 				rx_cs.Unlock();

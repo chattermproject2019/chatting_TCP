@@ -186,7 +186,7 @@ void CUDPClient_thdDlg::packetSegmentation(CString message) {
 			}
 		}
 	}
-	if ((temp.length() < 8)) { // 8bit보다 작게 저장된 패킷일때는 바로 보냄
+	if ( (temp.length() < 8)) { // 8bit보다 작게 저장된 패킷일때는 바로 보냄
 		newPacket.seq = ++seq; // seq넘버도 추가
 		std::bitset<8> bits(temp); // ex) "10101010" => 숫자 170 == 0b10101010
 		newPacket.data[packet_data_count % 10] = bits.to_ulong(); //data[0]~data[9]에 대해서 8bit(1byte)씩 숫자로 저장
@@ -281,18 +281,25 @@ UINT TXThread(LPVOID arg) //TXThread 함수 정의
 			message += "\r\n";
 			pDlg->m_tx_edit.SetWindowTextW(message);
 			
+
 			//while(!pDlg->packet_send_buffer.IsEmpty()){ // 패킷버퍼에 뭔가있으면 보냄
+			int current_frame = 1;
 			for (int i = 0; i < pDlg->packet_send_buffer.GetSize(); ++i) {
 				//(char*)& 안해주면 구조체 못보냄. 수신단도 저렇게 받아줘야함
 				pDlg->timeout = false;
+
 				std::cout << pDlg->packet_send_buffer.GetAt(i).seq << " 번 frame을 보냅니다.\n";
 				Data_socket_cs.Lock();
 				pDlg->m_pDataSocket->SendToEx((char*)&pDlg->packet_send_buffer.GetAt(i), sizeof(Packet), pDlg->peerPort, pDlg->peerIp, 0);
 				Data_socket_cs.Unlock();
-
-				/*sequence_cs.Lock();
-				pDlg->next_sequnce = i;
-				sequence_cs.Unlock();*/
+				
+				if (current_frame < pDlg->window_size) { // window size만큼 보냅니다.
+					current_frame++;
+					continue;
+				}
+				else {
+					current_frame = 1;
+				}
 
 				/*stop&wait ack메세지 수신기다림*/
 				std::cout << "Ack메세지를 기다리고 있습니다...\n";
@@ -306,7 +313,7 @@ UINT TXThread(LPVOID arg) //TXThread 함수 정의
 				
 				pDlg->timerThread = AfxBeginThread(timer_thread_func, (LPVOID)&pDlg->arg3, NULL);
 				
-				pDlg->StartTimer(timer_id, pDlg->arg3.deadline); // 타이머 시작, deadline주기로 OnTime함수 실행
+				//pDlg->StartTimer(timer_id, pDlg->arg3.deadline); // 타이머 시작, deadline주기로 OnTime함수 실행
 
 				while (pDlg->ack_receive_buffer.IsEmpty()) { // ack버퍼가 비어있음.
 					if (pDlg->timeout == true) { // 버퍼에 아무것도 없는 상태로, 시간지나면 expire
@@ -382,6 +389,9 @@ BOOL CUDPClient_thdDlg::OnInitDialog()
 
 	/// TODO: 여기에 추가 초기화 작업을 추가합니다.
 
+	mode = 0; // 0-Stop&Wait, 1-GoBackN, 2-SelectiveRecject
+	
+	window_size = 1; // 윈도우 사이즈 default값은 3으로 합니다.
 
 	ack_receive_buffer.RemoveAll();
 	packet_send_buffer.RemoveAll(); // packet buffer 초기화

@@ -96,4 +96,6 @@ public:
 	void StopTimer(unsigned int timer_id); // ≈∏¿Ã∏” ≤Ù±‚
 
 	BOOL timeout = false;
+
+	unsigned short window_size;
 };

@@ -98,4 +98,6 @@ public:
 	BOOL timeout = false;
 	//int next_sequnce; //  다음으로 보낼 frame 넘버를 저장하는 변수, frame을 보낼때, 잘 보냈거나, 에러가 나면, 보내야하는 sequence가 달라지기 때문에,  
 
+	unsigned short window_size; // Go Back N은 최대 2^(seq넘버 bit수 =지금은 16bit) - 1 까지 가능
+	int mode; // 0-Stop&Wait, 1-GoBackN, 2-SelectiveRecject
 };

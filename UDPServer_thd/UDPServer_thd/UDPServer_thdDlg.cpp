@@ -23,7 +23,7 @@ CCriticalSection tx_cs;
 CCriticalSection rx_cs;
 
 CCriticalSection Data_socket_cs;
-CCriticalSection ACK_CHECK_cs; // ACK메세지를 수신했는지를 체크하기위한 cs.
+CCriticalSection ACK_BUFFER_cs; // ACK메세지를 수신했는지를 체크하기위한 cs.
 int ack_checker = 0;// 0으로 초기화, 0이면 ACK또는 NACK가 수신안된것.
 
 // 응용 프로그램 정보에 사용되는 CAboutDlg 대화 상자입니다.
@@ -187,7 +187,13 @@ void CUDPServer_thdDlg::packetSegmentation(CString message) {
 			}
 		}
 	}
-	if ((temp.length() < 8)) { // 8bit보다 작게 저장된 패킷일때는 바로 보냄
+	bool thereIsData = false; // 보내야하는 남은 데이터가 있는지 체크
+	for (int data_checker = 0; data_checker < 6; data_checker++) {
+		if (newPacket.data[data_checker] ^ 0 != 0) {
+			thereIsData = true;
+		}
+	}
+	if (thereIsData&&(temp.length() < 8)) { // 8bit보다 작게 저장된 패킷일때는 바로 보냄
 		newPacket.seq = ++seq; // seq넘버도 추가
 		std::bitset<8> bits(temp); // ex) "10101010" => 숫자 170 == 0b10101010
 		newPacket.data[packet_data_count % 10] = bits.to_ulong(); //data[0]~data[9]에 대해서 8bit(1byte)씩 숫자로 저장
@@ -277,23 +283,45 @@ UINT TXThread(LPVOID arg) // 메세지 보내는 스레드
 			message += "\r\n";
 			pDlg->m_tx_edit.SetWindowTextW(message);
 
+
 			//while(!pDlg->packet_send_buffer.IsEmpty()){ // 패킷버퍼에 뭔가있으면 보냄
+			int current_frame = 1;
+			int before_frame = 0;// window가 이동하기 전 frame seq
 			for (int i = 0; i < pDlg->packet_send_buffer.GetSize(); ++i) {
 				//(char*)& 안해주면 구조체 못보냄. 수신단도 저렇게 받아줘야함
 				pDlg->timeout = false;
+
 				std::cout << pDlg->packet_send_buffer.GetAt(i).seq << " 번 frame을 보냅니다.\n";
 				Data_socket_cs.Lock();
 				pDlg->m_pDataSocket->SendToEx((char*)&pDlg->packet_send_buffer.GetAt(i), sizeof(Packet), pDlg->peerPort, pDlg->peerIp, 0);
 				Data_socket_cs.Unlock();
 
-				/*sequence_cs.Lock();
-				pDlg->next_sequnce = i;
-				sequence_cs.Unlock();*/
 
-				/*stop&wait ack메세지 수신기다림*/
+				if (current_frame < pDlg->window_size && //// window size만큼 보냅니다.
+					i + pDlg->window_size <= pDlg->packet_send_buffer.GetSize()) { // 그리고 남은량이 windowsize보다 작아야합니다.
+					current_frame++;
+					continue;
+				}
+				else if (!(i + pDlg->window_size <= pDlg->packet_send_buffer.GetSize())) {
+
+					before_frame = i;
+					for (int j = i + 1; j < pDlg->packet_send_buffer.GetSize(); ++j) { // window size보다, 적게 남았으므로 다 보냅니다.
+						std::cout << pDlg->packet_send_buffer.GetAt(i).seq << " 번 frame을 보냅니다.\n";
+						Data_socket_cs.Lock();
+						pDlg->m_pDataSocket->SendToEx((char*)&pDlg->packet_send_buffer.GetAt(i), sizeof(Packet), pDlg->peerPort, pDlg->peerIp, 0);
+						Data_socket_cs.Unlock();
+					}
+
+				}
+				else {
+					before_frame = i - current_frame;
+					current_frame = 1;
+				}
+
+				/* ack메세지 수신기다림*/
 				std::cout << "Ack메세지를 기다리고 있습니다...\n";
 
-				int timer_id = (int)(rand() * 1000); // 랜덤으로 id 생성, 중복되지 않게 수정하기
+				int timer_id = (int)(rand() * 30); // 랜덤으로 id 생성, 중복되지 않게 수정하기
 
 				pDlg->arg3.deadline = 1000; // 1초가 deadline입니다.
 				pDlg->arg3.timer_id = timer_id;
@@ -314,24 +342,42 @@ UINT TXThread(LPVOID arg) // 메세지 보내는 스레드
 				//위while문을 빠져나오는 경우는 ack버퍼에 무언가 추가 되었거나, timeout되었거나 둘중하나임
 				pDlg->StopTimer(pDlg->arg3.timer_id); //timer종료 
 
+
 				if (!pDlg->ack_receive_buffer.IsEmpty()) { // ack 버퍼에 무언가가 도착했음.
+					ACK_BUFFER_cs.Lock();
+					//std::cout << "ack메세지감지\n";
 					if (pDlg->ack_receive_buffer.GetAt(0) > 0) { // 받은 메세지가 ack였다
-						std::cout << "ack메세지를 받았으므로, 보냈던 " << pDlg->ack_receive_buffer.GetAt(0) << "번 frame을 확정짓습니다.\n";
+
+						std::cout << "ack메세지를 받았으므로, 보냈던 " << pDlg->ack_receive_buffer.GetAt(0) << "번 frame 까지 확정짓습니다.\n";
 						pDlg->ack_receive_buffer.RemoveAt(0); // ack 수신확인한거 clear
-															  //pArg->frame_seq; // 그대로있어야 tx에서 i++되서 다음 seq로 넘어감
+
+															  //그대로 진행~
 					}
 					else if ((pDlg->ack_receive_buffer.GetAt(0) < 0)) { // 받은메세지가 nack였으면 똑같은거 한번 더 보냄
-						std::cout << "nack메세지를 받았으므로 보냈던" << -1 * pDlg->ack_receive_buffer.GetAt(0) << "번 frame을 다시 보냅니다.\n";
-						--i;
-						//pArg->frame_seq--; // 한번 더 보내기 위해
+
+						std::cout << "nack메세지를 받았으므로 보냈던" << -1 * pDlg->ack_receive_buffer.GetAt(0) << "번 frame부터 다시 보냅니다.\n";
+						//--i;
+						//해당 frame부터 다시보내야 하므로, 오류뜬 frame seq를 i에 대입
+
+						i = -1 * pDlg->ack_receive_buffer.GetAt(0);
 						pDlg->ack_receive_buffer.RemoveAt(0); // ack 수신확인한거 clear
 															  //break; // 똑같은(nack) frame보내기위해 break;
 					}
+					ACK_BUFFER_cs.Unlock();
 				}
 				else if (pDlg->timeout == true) { // 비록 ack메세지는 못받았지만, timeout은 패킷loss이므로 재전송해줘야함
-					std::cout << "timeout이므로 받았으므로 보냈던 " << pDlg->packet_send_buffer.GetAt(i).seq << "번 frame을 다시 보냅니다.\n";
+					std::cout << "timeout이므로 받았으므로 보냈던 " << before_frame + 1 << "번 frame부터 다시 보냅니다.\n";
 					//pArg->frame_seq--; // 한번 더 보내기 위해
-					i--;
+					//i--;
+
+					if (i == 0) { //한번더 보내기
+						i = before_frame - 1;
+					}
+					else {
+						i = before_frame;
+					}
+
+					continue;
 				}
 
 			}
@@ -377,7 +423,7 @@ BOOL CUDPServer_thdDlg::OnInitDialog()
 
 	// TODO: 여기에 추가 초기화 작업을 추가합니다.
 
-	window_size = 1;
+	window_size = 3;
 
 
 	CString myIp = _T("127.0.0.1");
@@ -537,24 +583,31 @@ void CUDPServer_thdDlg::ProcessReceive(CDataSocket* pSocket, int nErrorCode)
 	newPacket = (Packet*)pBuf; // Packet형으로 만듦
 
 	std::wcout << (const wchar_t*)peerIp<< "로 부터 총 "<< newPacket->total_sequence_number <<"개 frame 수신중\n=> ";
-	std::cout<<"현재 " <<newPacket->seq<<"번째 frame도착\n";	
+	//std::cout<<"현재 " <<newPacket->seq<<"번째 frame도착\n";	
 
-	
 	unsigned short* short_packet = (unsigned short*)newPacket;//Packet to unsigned short*
 	unsigned short calculatedChecksum = checksum_packet(short_packet, sizeof(short_packet) / sizeof(short_packet[0]));
 	printf("받은 패킷의 체크섬 %x, 계산한 체크섬 값: %x \n", newPacket->checksum, calculatedChecksum);
 
 	if (calculatedChecksum != 0) { // checksum 에러이면
+		std::cout<<"현재 " <<newPacket->seq<<"번째 frame도착\n";	
 		std::cout << "체크섬 에러입니다.\n";
 		
 		/*에러 컨트롤*/
 		if (newPacket->response.ACK != 0) { // (n)ACK로 추정되는 메세지가 checksum에러일 경우. 무시해서 expire되게한다.
+			std::cout << "checksum에러인 (N)ACK로 추정되는 메세지가 도착하였으므로 무시합니다.\n";
 			//무시 => timeout시킴 (piggy back인데, 데이터도 없는경우 그냥 무시된다는 뜻. )
 		}
 		if( newPacket->seq!=0 ){ // 에러인데 ACK메세지가 아니라고 추정되면, 데이터부분이 에러인걸로 간주하고 NACK메세지를 보낸다.
+			
+			std::cout << "checksum에러인 data로 추정되는 메세지가 발견되어 nack를 전송합니다.\n";
+
+			current_error_frame = newPacket->seq;
+
 			AckPacket.response.ACK = newPacket->seq; //받은 패킷번호
 			AckPacket.response.more = true; // 더 수신가능
 			AckPacket.response.no_error = false; // 에러없음이 거짓
+			AckPacket.total_sequence_number = 1; // ack메세지는 1개로 충분
 
 			AckPacket.checksum = 0;
 			unsigned short* short_packet = (unsigned short*)&AckPacket;
@@ -573,76 +626,151 @@ void CUDPServer_thdDlg::ProcessReceive(CDataSocket* pSocket, int nErrorCode)
 	else { // checksum에러가 없음
 
 		
-		/*에러없는 ACK메세지 수신하는 경우*/
+		/*에러없는 (N)ACK메세지 수신하는 경우*/
 		if (newPacket->response.ACK != 0) {
 			std::cout << "ACK메세지도착: 에러여부: " << newPacket->response.no_error << " 해당frame 번호: " << newPacket->response.ACK << " 계속수신가능여부: " << newPacket->response.no_error << "\n";
 
-			// ack수신할때마다 send부분에 알려줘야함. 1개의 frame씩 보내기 때문에.
+			// ack수신할때마다 send부분에 알려줘야함
 			if (newPacket->response.no_error == true) { // ACK 
+				ACK_BUFFER_cs.Lock();
 				ack_receive_buffer.Add(newPacket->response.ACK); // 정상적으로 받은 frame넘버를 저장.
+				ACK_BUFFER_cs.Unlock();
 			}
 			else { // NACK
+				ACK_BUFFER_cs.Lock();
 				ack_receive_buffer.Add(-1 * newPacket->response.ACK); // 오류로 받은 frame넘버를 저장. 음수로
+				ACK_BUFFER_cs.Unlock();
 			}
 	
 		}
 
 		/*에러없는 데이터 수신 */
-		if (newPacket->seq!=0) {  
+		if (newPacket->seq != 0) {
+			std::cout << "현재 " << newPacket->seq << "번째 frame도착\n";
 
-			//받은 packet에 대하여 48bit data추출
-			std::string data_temp = "";
+			if( !packet_receive_buffer.IsEmpty()){ // 받은 packet의 버퍼에 무언가 있고
+				// 에러없는 데이터 받았는데 마지막으로 받은 frame seq와 연속적이지 않을때
+				if (newPacket->seq-1 !=  packet_receive_buffer.GetAt(packet_receive_buffer.GetSize() - 1).seq) {
+					std::cout << "연속되지 않은 frame을 받았습니다..\n"; // 중복제거 효과도 있음
+					std::cout << "마지막으로 받은 seq는 " << packet_receive_buffer.GetAt(packet_receive_buffer.GetSize() - 1).seq << "입니다\n";
+					if (current_error_frame != -1) { // 이전에 오류가 일어나지 않았으므로, 
+						//이 연속되지 않은 frame은 loss또는 routing delay로 인해 순서가 섞인것 입니다.
+						// nack보내서 다시 받습니다.
+						current_error_frame = packet_receive_buffer.GetAt(packet_receive_buffer.GetSize() - 1).seq + 1; // 마지막까지 받은 seq에서 다음으로 받아야할 것이 에러가 난 것입니다.
 
-			for (int i = 0; i < sizeof(newPacket->data); ++i) { // sizeof(newPacket->data) == 10
-				std::bitset<8> bits(newPacket->data[i]);
-				data_temp += bits.to_string(); // bitset to string
-			}
-			cout << "이진화데이터 48bit :\n" << data_temp << "\n를 받았습니다.\n\n";
+						AckPacket.response.ACK = current_error_frame; //받은 패킷번호
+						AckPacket.response.more = true; // 더 수신가능
+						AckPacket.response.no_error = true; // 에러없음
+						AckPacket.total_sequence_number = 1; // ack메세지는 1개로 충분
 
-			packet_receive_buffer.Add(*newPacket); // 받은 패킷버퍼에 추가.
-			std::cout << "현재 receive packet 버퍼 사이즈는 " << packet_receive_buffer.GetSize() << "입니다.\n";
-			
+						AckPacket.checksum = 0;
+						unsigned short* short_packet = (unsigned short*)&AckPacket;
+						AckPacket.checksum = checksum_packet(short_packet, sizeof(short_packet) / sizeof(short_packet[0]));
+						printf("보내려는 nack 패킷의 체크섬 %x\n", AckPacket.checksum);
 
-			if (packet_receive_buffer.GetSize() == window_size) { // window size만큼 수신연속으로 수신했으면 확인메세지를 보냅니다.
-				AckPacket.response.ACK = newPacket->seq; //받은 패킷번호
-				AckPacket.response.more = true; // 더 수신가능
-				AckPacket.response.no_error = true; // 에러없음
+						Data_socket_cs.Lock();
+						std::cout << current_error_frame << " 번 frame에 대한 nack메세지를 보냅니다.\n";
+						m_pDataSocket->SendToEx((char*)&AckPacket, sizeof(Packet), peerPort, peerIp, 0);
+						Data_socket_cs.Unlock();
 
-				AckPacket.checksum = 0;
-				unsigned short* short_packet = (unsigned short*)&AckPacket;
-				AckPacket.checksum = checksum_packet(short_packet, sizeof(short_packet) / sizeof(short_packet[0]));
-				printf("보내려는 ack 패킷의 체크섬 %x", AckPacket.checksum);
-
-				Data_socket_cs.Lock();
-				std::cout << newPacket->seq << " 번 frame 까지에 대한 ack메세지를 보냅니다.\n";
-				m_pDataSocket->SendToEx((char*)&AckPacket, sizeof(Packet), peerPort, peerIp, 0);
-				Data_socket_cs.Unlock();
-			}
-
-			if (packet_receive_buffer.GetSize() == newPacket->total_sequence_number) { // 1:1이므로 받은거에 들어있는거 바로체크해도됨
-				// 최대 frame수랑 buffer에 저장된 frame수랑 같으면																   //Packet에 대하여 오름차순 퀵정렬
-				QSortCArray(packet_receive_buffer, ComparePacket);
-				//받은패킷들에 대해 모든 data추출 48*total_sequence_number bit
-				std::string data_temp = "";
-				for (int k = 0; k < packet_receive_buffer.GetSize(); ++k) {
-					for (int i = 0; i < sizeof(newPacket->data); ++i) { // sizeof(newPacket->data) == 6
-						std::bitset<8> bits(packet_receive_buffer.GetAt(k).data[i]);
-						std::cout << bits << "\n";
-						data_temp += bits.to_string(); // bitset to string
 					}
+					else { // 이전에 에러가 일어나서 nack보내서, 순서대로 못받은 것이므로, 지금 것들은 다 무시합니다.
+						std::cout << "무시\n";
+						return;
+					}
+
 				}
-				rx_cs.Lock();
-				arg2.pList->AddTail(CString(data_temp.c_str())); // string to CString // 추출한 data값 을 버퍼에 추가
-				rx_cs.Unlock();
-
-				packet_receive_buffer.RemoveAll(); // 버퍼비우기
-
 			}
+			else { // 수신패킷 버퍼가 비어있을때 받았다면
+				//받은 패킷의 seq가 1인지 확인합니다.
+				if (newPacket->seq != 1) { // 처음 받는 frame인데 seq가 1이 아니면 에러입니다.
+					current_error_frame = 1;
+
+					AckPacket.response.ACK = current_error_frame; //받은 패킷번호
+					AckPacket.response.more = true; // 더 수신가능
+					AckPacket.response.no_error = true; // 에러없음
+					AckPacket.total_sequence_number = 1; // ack메세지는 1개로 충분
+
+					AckPacket.checksum = 0;
+					unsigned short* short_packet = (unsigned short*)&AckPacket;
+					AckPacket.checksum = checksum_packet(short_packet, sizeof(short_packet) / sizeof(short_packet[0]));
+					printf("보내려는 nack 패킷의 체크섬 %x\n", AckPacket.checksum);
+
+					Data_socket_cs.Lock();
+					std::cout << current_error_frame << " 번 frame에 대한 nack메세지를 보냅니다.\n";
+					m_pDataSocket->SendToEx((char*)&AckPacket, sizeof(Packet), peerPort, peerIp, 0);
+					Data_socket_cs.Unlock();
+					return;
+				}
+				else { // 정상적으로 받았으므로 넘어갑니다.
+					// pass
+				}
+			}
+				//Sleep(2000);
+
+			current_error_frame = -1; // 제대로 받았다면, 에러정보를 clear
+
+				//받은 packet에 대하여 48bit data추출
+				std::string data_temp = "";
+
+				for (int i = 0; i < sizeof(newPacket->data); ++i) { // sizeof(newPacket->data) == 10
+					std::bitset<8> bits(newPacket->data[i]);
+					data_temp += bits.to_string(); // bitset to string
+				}
+				cout << "이진화데이터 48bit :\n" << data_temp << "\n를 받았습니다.\n\n";
+
+				packet_receive_buffer.Add(*newPacket); // 받은 패킷버퍼에 추가.
+				std::cout << "현재 receive packet 버퍼 사이즈는 " << packet_receive_buffer.GetSize() << "입니다.\n";
+
+
+				if (packet_receive_buffer.GetSize()%window_size==0 ||
+					newPacket->total_sequence_number== packet_receive_buffer.GetAt(packet_receive_buffer.GetSize() - 1).seq
+					) { // window size만큼 연속으로 수신했으면 확인메세지를 보냅니다. 
+						// 또는 마지막 frame을 받았을때도 확인메세지를 보냅니다.( 총 frame수가 windowsize의 배수가 아닐 수도 있으므로   ) 
+					
+					AckPacket.seq = 0;
+
+					AckPacket.response.ACK = newPacket->seq; //받은 패킷번호
+					AckPacket.response.more = true; // 더 수신가능
+					AckPacket.response.no_error = true; // 에러없음
+					AckPacket.total_sequence_number = 1;
+
+					AckPacket.checksum = 0;
+					unsigned short* short_packet = (unsigned short*)&AckPacket;
+					AckPacket.checksum = checksum_packet(short_packet, sizeof(short_packet) / sizeof(short_packet[0]));
+					printf("보내려는 ack 패킷의 체크섬 %x\n", AckPacket.checksum);
+
+					Data_socket_cs.Lock();
+					std::cout << newPacket->seq << " 번 frame 까지에 대한 ack메세지를 보냅니다.\n";
+					m_pDataSocket->SendToEx((char*)&AckPacket, sizeof(Packet), peerPort, peerIp, 0);
+					Data_socket_cs.Unlock();
+				}
+
+				if (packet_receive_buffer.GetSize() == newPacket->total_sequence_number) { // 1:1이므로 받은거에 들어있는거 바로체크해도됨
+																						   // 최대 frame수랑 buffer에 저장된 frame수랑 같으면																   //Packet에 대하여 오름차순 퀵정렬
+					QSortCArray(packet_receive_buffer, ComparePacket);
+					//받은패킷들에 대해 모든 data추출 48*total_sequence_number bit
+					std::string data_temp = "";
+					for (int k = 0; k < packet_receive_buffer.GetSize(); ++k) {
+						for (int i = 0; i < sizeof(newPacket->data); ++i) { // sizeof(newPacket->data) == 6
+							std::bitset<8> bits(packet_receive_buffer.GetAt(k).data[i]);
+							std::cout << bits << "\n";
+							data_temp += bits.to_string(); // bitset to string
+						}
+					}
+					rx_cs.Lock();
+					arg2.pList->AddTail(CString(data_temp.c_str())); // string to CString // 추출한 data값 을 버퍼에 추가
+					rx_cs.Unlock();
+
+					packet_receive_buffer.RemoveAll(); // 버퍼비우기
+					overlap_checker_Lock = false;
+				}
+			}
+
+
 		}
 	}
 
-	
-}
 
 
 void CUDPServer_thdDlg::OnBnClickedDisconnect()

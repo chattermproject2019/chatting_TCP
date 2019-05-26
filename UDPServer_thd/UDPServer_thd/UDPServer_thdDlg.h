@@ -98,4 +98,10 @@ public:
 	BOOL timeout = false;
 
 	unsigned short window_size;
+
+	int current_error_frame=-1;
+
+	bool overlap_checker_Lock = false;
+	bool* overlap_checker;
+
 };

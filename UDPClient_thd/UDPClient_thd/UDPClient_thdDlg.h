@@ -100,4 +100,9 @@ public:
 
 	unsigned short window_size; // Go Back N은 최대 2^(seq넘버 bit수 =지금은 16bit) - 1 까지 가능
 	int mode; // 0-Stop&Wait, 1-GoBackN, 2-SelectiveRecject
+
+	int current_error_frame = -1;
+
+	bool overlap_checker_Lock = false;
+	bool* overlap_checker;
 };

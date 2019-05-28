@@ -23,7 +23,9 @@ Stop and Wait [x]
 
 Sliding_window [x]
 
-Go Back N []
+Go Back N [x]
+
+PiggyBack [x]
 
 Selective Reject []
 

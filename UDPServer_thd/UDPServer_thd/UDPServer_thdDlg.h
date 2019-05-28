@@ -103,5 +103,6 @@ public:
 
 	bool overlap_checker_Lock = false;
 	bool* overlap_checker;
+	CArray<Packet> ack_send_buffer; // ack메세지를 보내야 하는경우, 이 버퍼에 저장했다가 보냅니다.
 
 };

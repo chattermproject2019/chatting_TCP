@@ -1259,6 +1259,7 @@ void CUDPClient_thdDlg::OnBnClickedOpen()
 	// TODO: 여기에 컨트롤 알림 처리기 코드를 추가합니다.
 	static TCHAR BASED_CODE szFilter[] = _T("이미지 파일(*.BMP, *.GIF, *.JPG) | *.BMP; *.GIF; *.JPG; *.bmp; *.jpg; *.gif | 모든파일(*.*)|*.*||");
 	CFileDialog dlg(TRUE, _T("*.jpg"), _T("image"), OFN_HIDEREADONLY, szFilter);
+	//CFileDialog dlg(TRUE, "txt", "", OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT, "텍스트(*.txt)|*.txt|모든파일 (*.*)|*.*||");
 	if (IDOK == dlg.DoModal())
 	{
 		CString pathName = dlg.GetPathName();

@@ -105,4 +105,5 @@ public:
 	bool* overlap_checker;
 	CArray<Packet> ack_send_buffer; // ack메세지를 보내야 하는경우, 이 버퍼에 저장했다가 보냅니다.
 
+	int mode; // 0-Stop&Wait, 1-GoBackN, 2-SelectiveRecject
 };

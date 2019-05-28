@@ -1,14 +1,15 @@
-﻿  UDPServer_thdDlg.cpp
-c:\users\대현\desktop\clone\chatting_tcp\udpserver_thd\udpserver_thd\udpserver_thddlg.cpp(162): warning C4267: '=': 'size_t'에서 'unsigned short'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-c:\users\대현\desktop\clone\chatting_tcp\udpserver_thd\udpserver_thd\udpserver_thddlg.cpp(165): warning C4267: '=': 'size_t'에서 'unsigned short'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-c:\users\대현\desktop\clone\chatting_tcp\udpserver_thd\udpserver_thd\udpserver_thddlg.cpp(171): warning C4018: '<': signed 또는 unsigned가 일치하지 않습니다.
-c:\users\대현\desktop\clone\chatting_tcp\udpserver_thd\udpserver_thd\udpserver_thddlg.cpp(175): warning C4244: '=': 'unsigned long'에서 'unsigned char'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-c:\users\대현\desktop\clone\chatting_tcp\udpserver_thd\udpserver_thd\udpserver_thddlg.cpp(196): warning C4554: '^': 연산자 우선 순위에 오류가 있는지 확인하십시오. 괄호를 사용하여 우선 순위를 명확하게 지정하십시오.
-c:\users\대현\desktop\clone\chatting_tcp\udpserver_thd\udpserver_thd\udpserver_thddlg.cpp(203): warning C4244: '=': 'unsigned long'에서 'unsigned char'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-c:\users\대현\desktop\clone\chatting_tcp\udpserver_thd\udpserver_thd\udpserver_thddlg.cpp(319): warning C4805: '==': 연산에 'BOOL' 형식과 'bool' 형식을 함께 사용하는 것은 안전하지 않습니다.
-c:\users\대현\desktop\clone\chatting_tcp\udpserver_thd\udpserver_thd\udpserver_thddlg.cpp(342): warning C4805: '==': 연산에 'BOOL' 형식과 'bool' 형식을 함께 사용하는 것은 안전하지 않습니다.
-c:\users\대현\desktop\clone\chatting_tcp\udpserver_thd\udpserver_thd\udpserver_thddlg.cpp(427): warning C4805: '==': 연산에 'BOOL' 형식과 'bool' 형식을 함께 사용하는 것은 안전하지 않습니다.
-c:\users\대현\desktop\clone\chatting_tcp\udpserver_thd\udpserver_thd\udpserver_thddlg.cpp(459): warning C4805: '==': 연산에 'BOOL' 형식과 'bool' 형식을 함께 사용하는 것은 안전하지 않습니다.
+﻿cl : 명령줄 warning D9028: 최소 다시 빌드에 실패했습니다. 정상 빌드로 되돌립니다.
+  UDPServer_thdDlg.cpp
+c:\users\대현\desktop\clone\chatting_tcp\udpserver_thd\udpserver_thd\udpserver_thddlg.cpp(167): warning C4267: '=': 'size_t'에서 'unsigned short'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+c:\users\대현\desktop\clone\chatting_tcp\udpserver_thd\udpserver_thd\udpserver_thddlg.cpp(170): warning C4267: '=': 'size_t'에서 'unsigned short'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+c:\users\대현\desktop\clone\chatting_tcp\udpserver_thd\udpserver_thd\udpserver_thddlg.cpp(176): warning C4018: '<': signed 또는 unsigned가 일치하지 않습니다.
+c:\users\대현\desktop\clone\chatting_tcp\udpserver_thd\udpserver_thd\udpserver_thddlg.cpp(180): warning C4244: '=': 'unsigned long'에서 'unsigned char'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+c:\users\대현\desktop\clone\chatting_tcp\udpserver_thd\udpserver_thd\udpserver_thddlg.cpp(201): warning C4554: '^': 연산자 우선 순위에 오류가 있는지 확인하십시오. 괄호를 사용하여 우선 순위를 명확하게 지정하십시오.
+c:\users\대현\desktop\clone\chatting_tcp\udpserver_thd\udpserver_thd\udpserver_thddlg.cpp(208): warning C4244: '=': 'unsigned long'에서 'unsigned char'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+c:\users\대현\desktop\clone\chatting_tcp\udpserver_thd\udpserver_thd\udpserver_thddlg.cpp(328): warning C4805: '==': 연산에 'BOOL' 형식과 'bool' 형식을 함께 사용하는 것은 안전하지 않습니다.
+c:\users\대현\desktop\clone\chatting_tcp\udpserver_thd\udpserver_thd\udpserver_thddlg.cpp(352): warning C4805: '==': 연산에 'BOOL' 형식과 'bool' 형식을 함께 사용하는 것은 안전하지 않습니다.
+c:\users\대현\desktop\clone\chatting_tcp\udpserver_thd\udpserver_thd\udpserver_thddlg.cpp(439): warning C4805: '==': 연산에 'BOOL' 형식과 'bool' 형식을 함께 사용하는 것은 안전하지 않습니다.
+c:\users\대현\desktop\clone\chatting_tcp\udpserver_thd\udpserver_thd\udpserver_thddlg.cpp(472): warning C4805: '==': 연산에 'BOOL' 형식과 'bool' 형식을 함께 사용하는 것은 안전하지 않습니다.
 stdafx.obj : warning LNK4258: '/entry:WinMainCRTStartup' 지시문은 '/ENTRY:wWinMainCRTStartup' 스위치와 호환되지 않습니다. 무시됩니다.
   UDPServer_thd.vcxproj -> C:\Users\대현\Desktop\clone\chatting_TCP\UDPServer_thd\Debug\UDPServer_thd.exe
   UDPServer_thd.vcxproj -> C:\Users\대현\Desktop\clone\chatting_TCP\UDPServer_thd\Debug\UDPServer_thd.pdb (Partial PDB)

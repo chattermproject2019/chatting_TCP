@@ -98,6 +98,7 @@ public:
 	BOOL timeout = false;
 
 	unsigned short window_size;
+	unsigned short mode;// 0-Stop&Wait, 1-GoBackN, 2-SelectiveRecject
 
 	int current_error_frame=-1;
 
@@ -105,5 +106,7 @@ public:
 	bool* overlap_checker;
 	CArray<Packet> ack_send_buffer; // ack메세지를 보내야 하는경우, 이 버퍼에 저장했다가 보냅니다.
 
-	int mode; // 0-Stop&Wait, 1-GoBackN, 2-SelectiveRecject
+
+	CArray<int> error_buffer; // Selective Reject용 에러버퍼, 에러가 난 frame seq를 저장합니다.
+	BOOL timer_id_checker[1000] = { 0, };
 };

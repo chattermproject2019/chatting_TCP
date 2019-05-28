@@ -81,6 +81,7 @@ public:
 	void ProcessReceive(CDataSocket* pSocket, int nErrorCode);
 
 	CIPAddressCtrl m_ipaddr;
+	CString temp_str;
 	CString myIp;
 	int myPort;
 	CString peerIp;
@@ -99,7 +100,7 @@ public:
 	//int next_sequnce; //  다음으로 보낼 frame 넘버를 저장하는 변수, frame을 보낼때, 잘 보냈거나, 에러가 나면, 보내야하는 sequence가 달라지기 때문에,  
 
 	unsigned short window_size; // Go Back N은 최대 2^(seq넘버 bit수 =지금은 16bit) - 1 까지 가능
-	int mode; // 0-Stop&Wait, 1-GoBackN, 2-SelectiveRecject
+	unsigned short mode; // 0-Stop&Wait, 1-GoBackN, 2-SelectiveRecject
 
 	int current_error_frame = -1;
 
@@ -108,4 +109,11 @@ public:
 
 	CArray<Packet> ack_send_buffer; // ack메세지를 보내야 하는경우, 이 버퍼에 저장했다가 보냅니다.
 
+	CArray<int> error_buffer; // Selective Reject용 에러버퍼, 에러가 난 frame seq를 저장합니다.
+
+	BOOL timer_id_checker[1000] = {0,};
+	BOOL mRadio;
+	afx_msg void OnBnClickedButton1();
+	CEdit m_windowSize;
+	int m_windowSzie_val;
 };

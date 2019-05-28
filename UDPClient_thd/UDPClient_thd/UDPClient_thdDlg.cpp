@@ -21,6 +21,7 @@ using namespace std;
 
 #define STOP_AND_WAIT 0
 #define GO_BACK_N 1
+#define SELECTIVE_REJECT 2
 
 CCriticalSection tx_cs;
 CCriticalSection rx_cs;
@@ -29,7 +30,8 @@ CCriticalSection Data_socket_cs; //Data Socket tx로도 보내고, ACK반응용�
 CCriticalSection ACK_Receive_BUFFER_cs; // ACK메세지를 수신했는지를 체크하기위한 cs.
 CCriticalSection ACK_Send_BUFFER_cs; // ACK메세지를 보낼것이 있는지를 체크하기위한 cs.
 //CCriticalSection sequence_cs; // 다음 seq number, timer스레드에서 중복해서 수정하게 하지 않기 위함.
-
+CCriticalSection sender_cs; // 통신중에 mode와 window size가 바뀌지 않도록합니다. TX용
+CCriticalSection receiver_cs; // 통신중에 mode와 window size가 바뀌지 않도록합니다. receiver용
 
 // 응용 프로그램 정보에 사용되는 CAboutDlg 대화 상자입니다.
 
@@ -70,6 +72,8 @@ END_MESSAGE_MAP()
 
 CUDPClient_thdDlg::CUDPClient_thdDlg(CWnd* pParent /*=NULL*/)
 	: CDialogEx(IDD_UDPCLIENT_THD_DIALOG, pParent)
+	, mRadio(FALSE)
+	, m_windowSzie_val(0)
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 }
@@ -81,6 +85,9 @@ void CUDPClient_thdDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_EDIT3, m_tx_edit);
 	DDX_Control(pDX, IDC_EDIT2, m_rx_edit);
 	DDX_Control(pDX, IDC_IPADDRESS1, m_ipaddr);
+	DDX_Radio(pDX, IDC_RADIO2, mRadio);
+	DDX_Control(pDX, IDC_EDIT4, m_windowSize);
+	DDX_Text(pDX, IDC_EDIT4, m_windowSzie_val);
 }
 
 BEGIN_MESSAGE_MAP(CUDPClient_thdDlg, CDialogEx)
@@ -90,6 +97,7 @@ BEGIN_MESSAGE_MAP(CUDPClient_thdDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_SEND, &CUDPClient_thdDlg::OnBnClickedSend)
 	ON_BN_CLICKED(IDC_CLOSE, &CUDPClient_thdDlg::OnBnClickedClose)
 	ON_WM_TIMER()
+	ON_BN_CLICKED(IDC_BUTTON1, &CUDPClient_thdDlg::OnBnClickedButton1)
 END_MESSAGE_MAP()
 
 
@@ -298,6 +306,8 @@ UINT TXThread(LPVOID arg) //TXThread 함수 정의
 			pDlg->m_tx_edit.GetWindowText(message);
 			message += "\r\n";
 			pDlg->m_tx_edit.SetWindowTextW(message);
+			
+			sender_cs.Lock();
 
 			if (pDlg->mode == STOP_AND_WAIT) {
 				//while(!pDlg->packet_send_buffer.IsEmpty()){ // 패킷버퍼에 뭔가있으면 보냄
@@ -310,10 +320,12 @@ UINT TXThread(LPVOID arg) //TXThread 함수 정의
 					pDlg->m_pDataSocket->SendToEx((char*)&pDlg->packet_send_buffer.GetAt(i), sizeof(Packet), pDlg->peerPort, pDlg->peerIp, 0);
 					Data_socket_cs.Unlock();
 
-					/*stop&wait ack메세지 수신기다림*/
-					std::cout << "Ack메세지를 기다리고 있습니다_STOP_AND_WAIT...\n";
+					/* ack메세지 수신기다림*/
+					std::cout << "Ack메세지를 기다리고 있습니다...\n";
 
-					int timer_id = (int)(rand() * 1000); // 랜덤으로 id 생성, 중복되지 않게 수정하기
+					int timer_id = (int)(rand() % 1000); // 랜덤으로 id 생성, 중복되지 않게 수정하기
+					while (pDlg->timer_id_checker[timer_id]) { timer_id = (int)(rand() * 30); }
+					pDlg->timer_id_checker[timer_id] = true;
 
 					pDlg->arg3.deadline = 1000; // 1초가 deadline입니다.
 					pDlg->arg3.timer_id = timer_id;
@@ -333,6 +345,7 @@ UINT TXThread(LPVOID arg) //TXThread 함수 정의
 
 					//위while문을 빠져나오는 경우는 ack버퍼에 무언가 추가 되었거나, timeout되었거나 둘중하나임
 					pDlg->StopTimer(pDlg->arg3.timer_id); //timer종료 
+					pDlg->timer_id_checker[timer_id] = false;
 
 					if (!pDlg->ack_receive_buffer.IsEmpty()) { // ack 버퍼에 무언가가 도착했음.
 						if (pDlg->ack_receive_buffer.GetAt(0) > 0) { // 받은 메세지가 ack였다
@@ -421,8 +434,10 @@ UINT TXThread(LPVOID arg) //TXThread 함수 정의
 					/* ack메세지 수신기다림*/
 					std::cout << "Ack메세지를 기다리고 있습니다...\n";
 				
-					int timer_id = (int)(rand() * 30); // 랜덤으로 id 생성, 중복되지 않게 수정하기
-				
+					int timer_id = (int)(rand() % 1000); // 랜덤으로 id 생성, 중복되지 않게 수정하기
+					while (pDlg->timer_id_checker[timer_id]) {timer_id =(int)(rand() * 30);}
+					pDlg->timer_id_checker[timer_id] = true;
+
 					pDlg->arg3.deadline = 1000; // 1초가 deadline입니다.
 					pDlg->arg3.timer_id = timer_id;
 					//타이머 스레드 바로 시작.
@@ -441,7 +456,7 @@ UINT TXThread(LPVOID arg) //TXThread 함수 정의
 
 					//위while문을 빠져나오는 경우는 ack버퍼에 무언가 추가 되었거나, timeout되었거나 둘중하나임
 					pDlg->StopTimer(pDlg->arg3.timer_id); //timer종료 
-
+					pDlg->timer_id_checker[timer_id] = false;
 				
 					if (!pDlg->ack_receive_buffer.IsEmpty()) { // ack 버퍼에 무언가가 도착했음.
 						ACK_Receive_BUFFER_cs.Lock();
@@ -482,6 +497,139 @@ UINT TXThread(LPVOID arg) //TXThread 함수 정의
 				
 				}
 			}
+			//else if (pDlg->mode == SELECTIVE_REJECT) {
+
+			//	//while(!pDlg->packet_send_buffer.IsEmpty()){ // 패킷버퍼에 뭔가있으면 보냄
+			//	int current_frame = 1;
+			//	int before_frame = 0;// window가 이동하기 전 frame seq
+			//	for (int i = 0; i < pDlg->packet_send_buffer.GetSize(); ++i) {
+			//		//(char*)& 안해주면 구조체 못보냄. 수신단도 저렇게 받아줘야함
+			//		pDlg->timeout = false;
+
+			//		int real_receive_frame_seq = i; //실제로 보낼 프레임 seq입니다.
+
+			//		if (!pDlg->error_buffer.IsEmpty()) {
+			//			//에러 버퍼에 에러가난 frame seq가 있으면 그것만 다시 보냅니다.
+			//			real_receive_frame_seq = pDlg->error_buffer.GetAt(0); // 실제 보낼 frame seq를 저장해서 대신 보내게함
+			//			pDlg->error_buffer.RemoveAt(0);
+			//			
+			//		}
+
+
+			//		// 보내야하는 ack메세지가 있으면 지금 보내는 패킷의 정보에 포함시키고, 제거합니다.
+			//		ACK_Send_BUFFER_cs.Lock();
+			//		if (!pDlg->ack_send_buffer.IsEmpty()) {
+			//			pDlg->packet_send_buffer.GetAt(real_receive_frame_seq).response = pDlg->ack_send_buffer.GetAt(0).response;
+			//			pDlg->ack_send_buffer.RemoveAt(0);
+			//			std::cout << pDlg->packet_send_buffer.GetAt(i).seq << " 번 frame을 보냅니다.(PiggyBack)\n";
+			//		}
+			//		else {
+			//			std::cout << pDlg->packet_send_buffer.GetAt(i).seq << " 번 frame을 보냅니다.(Piggy Back 아님!)\n";
+			//		}
+
+
+
+			//		Data_socket_cs.Lock();
+			//		pDlg->m_pDataSocket->SendToEx((char*)&pDlg->packet_send_buffer.GetAt(real_receive_frame_seq), sizeof(Packet), pDlg->peerPort, pDlg->peerIp, 0);
+			//		Data_socket_cs.Unlock();
+			//		ACK_Send_BUFFER_cs.Unlock();
+			//		
+			//		if (current_frame < pDlg->window_size && //// window size만큼 보냅니다.
+			//			real_receive_frame_seq + pDlg->window_size <= pDlg->packet_send_buffer.GetSize()) { // 그리고 남은량이 windowsize보다 작아야합니다.
+			//			current_frame++;
+			//			continue;
+			//		}
+			//		else if (!(real_receive_frame_seq + pDlg->window_size <= pDlg->packet_send_buffer.GetSize())) {
+			//			// window size보다, 보내는 패킷수가 적게 남았으므로 다 보냅니다. (지금 continue써서 window size만큼 보내주고 있어서. 이 조건문 안해주면 windowsize로 딱 나누어떨어지지 않을경우 전송이 완벽하게 안됨.)
+			//			before_frame = real_receive_frame_seq;
+			//			for (int j = real_receive_frame_seq + 1; j < pDlg->packet_send_buffer.GetSize(); ++j) {
+
+			//				
+			//				ACK_Send_BUFFER_cs.Lock();
+			//				if (!pDlg->ack_send_buffer.IsEmpty()) {
+			//					pDlg->packet_send_buffer.GetAt(j).response = pDlg->ack_send_buffer.GetAt(0).response;
+			//					pDlg->ack_send_buffer.RemoveAt(0);
+			//					std::cout << pDlg->packet_send_buffer.GetAt(j).seq << " 번 frame을 보냅니다.(PiggyBack)\n";
+			//				}
+			//				else {
+			//					std::cout << pDlg->packet_send_buffer.GetAt(j).seq << " 번 frame을 보냅니다.(Piggy Back 아님!)\n";
+			//				}
+
+
+			//				Data_socket_cs.Lock();
+			//				pDlg->m_pDataSocket->SendToEx((char*)&pDlg->packet_send_buffer.GetAt(j), sizeof(Packet), pDlg->peerPort, pDlg->peerIp, 0);
+			//				Data_socket_cs.Unlock();
+			//				ACK_Send_BUFFER_cs.Unlock();
+
+			//				++i; // i도 증가시켜줍니다. real_receive_frame_seq는 그저 i의 임시저장소일 뿐이므로, 이부분은 실제 i를 증가시켜야 for문이 정상적으로 작동
+			//			}
+
+			//		}
+			//		else {
+			//			before_frame = real_receive_frame_seq - current_frame;
+			//			current_frame = 1;
+			//		}
+
+			//		/* ack메세지 수신기다림*/
+			//		std::cout << "Ack메세지를 기다리고 있습니다...\n";
+
+			//		int timer_id = (int)(rand() * 30); // 랜덤으로 id 생성, 중복되지 않게 수정하기
+
+			//		pDlg->arg3.deadline = 1000; // 1초가 deadline입니다.
+			//		pDlg->arg3.timer_id = timer_id;
+			//		//타이머 스레드 바로 시작.
+			//		pDlg->arg3.frame_seq = i;
+
+			//		pDlg->timerThread = AfxBeginThread(timer_thread_func, (LPVOID)&pDlg->arg3, NULL);
+
+			//		//pDlg->StartTimer(timer_id, pDlg->arg3.deadline); // 타이머 시작, deadline주기로 OnTime함수 실행
+
+			//		while (pDlg->ack_receive_buffer.IsEmpty()) { // ack버퍼가 비어있음.
+			//			if (pDlg->timeout == true) { // 버퍼에 아무것도 없는 상태로, 시간지나면 expire
+			//				std::cout << "Expired!\n";
+			//				break;
+			//			}
+			//		}
+
+			//		//위while문을 빠져나오는 경우는 ack버퍼에 무언가 추가 되었거나, timeout되었거나 둘중하나임
+			//		pDlg->StopTimer(pDlg->arg3.timer_id); //timer종료 
+
+
+			//		if (!pDlg->ack_receive_buffer.IsEmpty()) { // ack 버퍼에 무언가가 도착했음.
+			//			ACK_Receive_BUFFER_cs.Lock();
+			//			//std::cout << "ack메세지감지\n";
+			//			if (pDlg->ack_receive_buffer.GetAt(0) > 0) { // 받은 메세지가 ack였다
+
+			//				std::cout << "ack메세지를 받았으므로, 보냈던 " << pDlg->ack_receive_buffer.GetAt(0) << "번 frame 까지 확정짓습니다.\n";
+			//				pDlg->ack_receive_buffer.RemoveAt(0); // ack 수신확인한거 clear
+
+			//													  //그대로 진행~
+			//			}
+			//			else if ((pDlg->ack_receive_buffer.GetAt(0) < 0)) { // 받은메세지가 nack였으면 똑같은거 한번 더 보냄
+
+			//				std::cout << "nack메세지를 받았으므로 보냈던" << -1 * pDlg->ack_receive_buffer.GetAt(0) << "번 frame만 다시 보냅니다.\n";
+			//				// i에 저장해서 다시 보내는대신에, error_buffer에 저장해서 보냅니다.
+			//				pDlg->error_buffer.Add(-1 * pDlg->ack_receive_buffer.GetAt(0) );
+			//				pDlg->ack_receive_buffer.RemoveAt(0); // ack 수신확인한거 clear
+			//													  //break; // 똑같은(nack) frame보내기위해 break;
+			//			}
+			//			ACK_Receive_BUFFER_cs.Unlock();
+			//		}
+			//		else if (pDlg->timeout == true) { // 비록 ack메세지는 못받았지만, timeout은 패킷loss이므로 재전송해줘야함
+			//			std::cout << "timeout이므로 받았으므로 보냈던 " << before_frame + 1 << "번 frame만 다시 보냅니다.\n";
+			//			// i에 저장해서 다시 보내는대신에, error_buffer에 저장해서 보냅니다.
+			//			pDlg->error_buffer.Add(before_frame );
+			//			--i;// 실제로 한번더 전송 하는거므로 i에서 1빼주기.
+			//			continue;
+			//		}
+
+			//	}
+
+
+			//}
+
+			sender_cs.Unlock();
+
 			pDlg->packet_send_buffer.RemoveAll(); // for문이기 때문에 다보냈으면 다 제거
 
 			//pDlg->m_pDataSocket->SendToEx(str, (str.GetLength() + 1) * sizeof(TCHAR), pDlg->peerPort, pDlg->peerIp, 0); ///UDP소켓을 통하여 해당 포트와 ip주소로 메세지를 전송합니다.
@@ -524,9 +672,13 @@ BOOL CUDPClient_thdDlg::OnInitDialog()
 
 	/// TODO: 여기에 추가 초기화 작업을 추가합니다.
 
-	mode = STOP_AND_WAIT; // 0-Stop&Wait, 1-GoBackN, 2-SelectiveRecject
+	mode = GO_BACK_N; // 0-STOP_AND_WAIT, 1-GO_BACK_N, 2-SELECTIVE_REJECT
 	
 	window_size = 3; // 윈도우 사이즈 default값은 3으로 합니다.
+	temp_str.Format(_T("%d"), window_size);
+	m_windowSize.SetWindowTextW(temp_str);
+
+	memset(timer_id_checker, false, sizeof(timer_id_checker));
 
 	ACK_Send_BUFFER_cs.Lock();
 	ack_send_buffer.RemoveAll();
@@ -536,6 +688,7 @@ BOOL CUDPClient_thdDlg::OnInitDialog()
 	ack_receive_buffer.RemoveAll();
 	ACK_Receive_BUFFER_cs.Unlock();
 
+	error_buffer.RemoveAll();
 	packet_send_buffer.RemoveAll(); // packet buffer 초기화
 
 	m_ipaddr.SetWindowTextW(_T("127.0.0.1"));
@@ -696,6 +849,8 @@ void CUDPClient_thdDlg::ProcessReceive(CDataSocket* pSocket, int nErrorCode)
 
 	newPacket = (Packet*)pBuf; // Packet형으로 만듦
 
+	receiver_cs.Lock();
+
 	if(  mode == STOP_AND_WAIT){
 		std::wcout << (const wchar_t*)peerIp << "로 부터 총 " << newPacket->total_sequence_number << "개 frame 수신중\n=> ";
 		std::cout << "현재 " << newPacket->seq << "번째 frame도착\n";
@@ -793,7 +948,7 @@ void CUDPClient_thdDlg::ProcessReceive(CDataSocket* pSocket, int nErrorCode)
 			}
 		}
 	}
-	else if( mode == GO_BACK_N ){
+	else if( mode == GO_BACK_N){
 	
 		std::wcout << (const wchar_t*)peerIp << "로 부터 총 " << newPacket->total_sequence_number << "개 frame 수신중\n=> ";
 		std::cout << "현재 " << newPacket->seq << "번째 frame도착\n";
@@ -1020,6 +1175,9 @@ void CUDPClient_thdDlg::ProcessReceive(CDataSocket* pSocket, int nErrorCode)
 
 		}
 	}
+
+	receiver_cs.Unlock();
+
 }
 
 
@@ -1044,4 +1202,52 @@ void CUDPClient_thdDlg::StartTimer(unsigned int timer_id, unsigned int n) // 클
 void CUDPClient_thdDlg::StopTimer(unsigned int timer_id) // 클래스 뷰에서 WM_Timer를 추가 시켜줬습니다.
 {
 	KillTimer(timer_id); // 해당아이디의 timer를 종료합니다.
+}
+
+void CUDPClient_thdDlg::OnBnClickedButton1() // 적용버튼이 눌리면,
+{
+	// TODO: 여기에 컨트롤 알림 처리기 코드를 추가합니다.
+	UpdateData(true); //대화상자로부터 값을 읽고
+
+	if (m_windowSzie_val > ((int)pow(2,(sizeof(Packet().seq) * 8))-1)) {
+		//Go_Back_N에서는 윈도우 사이즈가 seq로 나타낼수 있는 최대치 - 1 까지 허용
+		AfxMessageBox(_T("윈도우 사이즈를 낮춰주세요.") );
+		return;
+	}
+
+	sender_cs.Lock(); // 둘다 해제되고 모드와 windowsize를 바꿉니다.
+	receiver_cs.Lock();
+
+	if (mRadio == 0) {
+		mode = STOP_AND_WAIT;
+	}
+	else if (mRadio == GO_BACK_N) {
+		mode = GO_BACK_N;
+	}
+	else {
+		AfxMessageBox(_T("Error Control 방식을 정해주세요."));
+		return;
+	}
+
+	window_size = m_windowSzie_val; // window_size 변경
+
+	sender_cs.Unlock();
+	receiver_cs.Unlock();
+
+	Packet control_packet = Packet(); // window size와 error control mode를 전달합니다.
+
+	// 몇개의 flag들을 정상적이지 않은 걸로 바꿔주고, control용으로 씁니다.
+	control_packet.checksum = 1;
+	control_packet.seq = 0;
+	control_packet.total_sequence_number = 0;
+	memset(control_packet.data, 0x7f, sizeof(control_packet.data));
+	control_packet.data[0] = mode;
+	control_packet.data[1] = window_size;
+
+	Data_socket_cs.Lock(); // 바뀐 error control모드와 window size 전송
+	m_pDataSocket->SendToEx((char*)&control_packet, sizeof(Packet), peerPort, peerIp, 0);
+	Data_socket_cs.Unlock();
+
+	AfxMessageBox(_T("적용완료."));
+
 }

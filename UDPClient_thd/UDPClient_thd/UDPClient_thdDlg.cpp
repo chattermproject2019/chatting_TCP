@@ -98,6 +98,7 @@ BEGIN_MESSAGE_MAP(CUDPClient_thdDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_CLOSE, &CUDPClient_thdDlg::OnBnClickedClose)
 	ON_WM_TIMER()
 	ON_BN_CLICKED(IDC_BUTTON1, &CUDPClient_thdDlg::OnBnClickedButton1)
+	ON_BN_CLICKED(IDC_Open, &CUDPClient_thdDlg::OnBnClickedOpen)
 END_MESSAGE_MAP()
 
 
@@ -1250,4 +1251,17 @@ void CUDPClient_thdDlg::OnBnClickedButton1() // 적용버튼이 눌리면,
 
 	AfxMessageBox(_T("적용완료."));
 
+}
+
+
+void CUDPClient_thdDlg::OnBnClickedOpen()
+{
+	// TODO: 여기에 컨트롤 알림 처리기 코드를 추가합니다.
+	static TCHAR BASED_CODE szFilter[] = _T("이미지 파일(*.BMP, *.GIF, *.JPG) | *.BMP; *.GIF; *.JPG; *.bmp; *.jpg; *.gif | 모든파일(*.*)|*.*||");
+	CFileDialog dlg(TRUE, _T("*.jpg"), _T("image"), OFN_HIDEREADONLY, szFilter);
+	if (IDOK == dlg.DoModal())
+	{
+		CString pathName = dlg.GetPathName();
+		MessageBox(pathName);
+	}
 }

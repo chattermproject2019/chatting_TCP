@@ -93,6 +93,7 @@ BEGIN_MESSAGE_MAP(CUDPServer_thdDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_SEND, &CUDPServer_thdDlg::OnBnClickedSend)
 	ON_BN_CLICKED(IDC_DISCONNECT, &CUDPServer_thdDlg::OnBnClickedDisconnect)
 	ON_WM_TIMER()
+	ON_BN_CLICKED(IDC_Open, &CUDPServer_thdDlg::OnBnClickedOpen)
 END_MESSAGE_MAP()
 
 
@@ -1214,4 +1215,16 @@ void CUDPServer_thdDlg::StartTimer(unsigned int timer_id, unsigned int n) // 클�
 void CUDPServer_thdDlg::StopTimer(unsigned int timer_id) // 클래스 뷰에서 WM_Timer를 추가 시켜줬습니다.
 {
 	KillTimer(timer_id); // 해당아이디의 timer를 종료합니다.
+}
+
+void CUDPServer_thdDlg::OnBnClickedOpen()
+{
+	// TODO: 여기에 컨트롤 알림 처리기 코드를 추가합니다.
+	static TCHAR BASED_CODE szFilter[] = _T("이미지 파일(*.BMP, *.GIF, *.JPG) | *.BMP; *.GIF; *.JPG; *.bmp; *.jpg; *.gif | 모든파일(*.*)|*.*||");
+	CFileDialog dlg(TRUE, _T("*.jpg"), _T("image"), OFN_HIDEREADONLY, szFilter);
+	if (IDOK == dlg.DoModal())
+	{
+		CString pathName = dlg.GetPathName();
+		MessageBox(pathName);
+	}
 }

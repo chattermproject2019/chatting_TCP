@@ -116,4 +116,5 @@ public:
 	afx_msg void OnBnClickedButton1();
 	CEdit m_windowSize;
 	int m_windowSzie_val;
+	afx_msg void OnBnClickedOpen();
 };

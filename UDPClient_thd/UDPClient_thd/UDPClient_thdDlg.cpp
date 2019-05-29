@@ -1038,7 +1038,7 @@ void CUDPClient_thdDlg::ProcessReceive(CDataSocket* pSocket, int nErrorCode)
 
 							AckPacket.response.ACK = current_error_frame; //받은 패킷번호
 							AckPacket.response.more = true; // 더 수신가능
-							AckPacket.response.no_error = true; // 에러있음
+							AckPacket.response.no_error = false; // 에러있음
 							AckPacket.total_sequence_number = 1; // ack메세지는 1개로 충분
 
 							AckPacket.checksum = 0;

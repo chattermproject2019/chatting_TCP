@@ -187,7 +187,7 @@ void CUDPClient_thdDlg::packetSegmentation(CString message) {
 			if (packet_data_count == 6) { // 매번 48번째 bit를 추가할때마다 이때까지 저장한 packet을 packet buffer에 저장합니다.
 				
 				newPacket.seq = ++seq; // seq넘버도 추가
-				newPacket.total_sequence_number = total_packet; // 문자열 이진화한거를 80bit로 나누면 총 보낼 frame개수나옴
+				newPacket.total_sequence_number = total_packet; // 문자열 이진화한거를 48bit로 나누면 총 보낼 frame개수나옴
 				
 				newPacket.checksum = 0;
 				unsigned short* short_packet = (unsigned short*)&newPacket;
@@ -325,7 +325,7 @@ UINT TXThread(LPVOID arg) //TXThread 함수 정의
 					std::cout << "Ack메세지를 기다리고 있습니다...\n";
 
 					int timer_id = (int)(rand() % 1000); // 랜덤으로 id 생성, 중복되지 않게 수정하기
-					while (pDlg->timer_id_checker[timer_id]) { timer_id = (int)(rand() * 30); }
+					while (pDlg->timer_id_checker[timer_id]) { timer_id = (int)(rand() % 1000); }
 					pDlg->timer_id_checker[timer_id] = true;
 
 					pDlg->arg3.deadline = 1000; // 1초가 deadline입니다.
@@ -1038,7 +1038,7 @@ void CUDPClient_thdDlg::ProcessReceive(CDataSocket* pSocket, int nErrorCode)
 
 							AckPacket.response.ACK = current_error_frame; //받은 패킷번호
 							AckPacket.response.more = true; // 더 수신가능
-							AckPacket.response.no_error = true; // 에러없음
+							AckPacket.response.no_error = true; // 에러있음
 							AckPacket.total_sequence_number = 1; // ack메세지는 1개로 충분
 
 							AckPacket.checksum = 0;
@@ -1262,7 +1262,49 @@ void CUDPClient_thdDlg::OnBnClickedOpen()
 	//CFileDialog dlg(TRUE, "txt", "", OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT, "텍스트(*.txt)|*.txt|모든파일 (*.*)|*.*||");
 	if (IDOK == dlg.DoModal())
 	{
-		CString pathName = dlg.GetPathName();
-		MessageBox(pathName);
+		CString pathName = dlg.GetFileExt();
+		CFile sourceFile;
+		sourceFile.Open((LPCTSTR)pathName, CFile::modeRead | CFile::typeBinary);
+		int nNameLen = pathName.GetLength();
+		//Data_socket.Send(&nNameLen, 4);
+		//Data_socket.Send((LPCTSTR)pathName, nNameLen);
+		byte * data = new byte[7];
+		DWORD dwRead;
+		//file Read()
+		/*do
+		{
+			dwRead = sourceFile.Read(data, 6);
+			Packet filePacket = Packet();
+			unsigned short total_packet;
+			if (binaried.length() % 48 == 0) {
+				total_packet = binaried.length() / 48;
+			}
+			else {
+				total_packet = (binaried.length() / 48) + 1;
+			}
+			
+			int packet_data_count = 0;
+			int seq = 0;
+					filePacket.seq = ++seq; // seq넘버도 추가
+					filePacket.total_sequence_number = total_packet; // 문자열 이진화한거를 48bit로 나누면 총 보낼 frame개수나옴
+
+					filePacket.checksum = 0;
+					unsigned short* short_packet = (unsigned short*)&filePacket;
+					filePacket.checksum = checksum_packet(short_packet, sizeof(short_packet) / sizeof(short_packet[0]));
+					printf("보내려는 패킷의 체크섬 %x\n", filePacket.checksum);
+
+
+					packet_send_buffer.Add(filePacket); //버퍼에 패킷 추가
+
+
+					filePacket = Packet(); // 새 패킷할당
+					packet_data_count = 0;
+				}
+		} while (dwRead > 0);
+		*/
+
+
+		delete data;
+		sourceFile.Close();
 	}
 }

@@ -835,19 +835,21 @@ void CUDPServer_thdDlg::ProcessReceive(CDataSocket* pSocket, int nErrorCode)
 
 	newPacket = (Packet*)pBuf; // Packet형으로 만듦
 
-	sender_cs.Lock();
-	receiver_cs.Lock();
+	
 	/// control packet인지 체크
-	if (newPacket->checksum == 1 && newPacket->seq == 0 && newPacket->total_sequence_number == 0 && newPacket->data[2]== 0x7f && newPacket->data[3] == 0x7f && newPacket->data[4] == 0x7f && newPacket->data[5] == 0x7f) {
+	if 		(newPacket->checksum == 1 && newPacket->seq == 0 && newPacket->total_sequence_number == 0 && newPacket->data[2]== 0x7f && newPacket->data[3] == 0x7f && newPacket->data[4] == 0x7f && newPacket->data[5] == 0x7f) {
+		sender_cs.Lock();
+		receiver_cs.Lock(); 
 		mode = newPacket->data[0];
 		std::string mode_name = mode == 0 ? "STOP_AND_WAIT" : "GO_BACK_N";
 		window_size = newPacket->data[1];
 		std::string str_temp2 = ( std::string("mode: ") + mode_name + std::string("\nwindow size: ") + std::to_string(window_size).c_str() + std::string(("\n동기화되었습니다.")));
 		AfxMessageBox(CString(str_temp2.c_str()));
+		receiver_cs.Unlock();
+		sender_cs.Unlock();
 		return;
 	}
-	receiver_cs.Unlock();
-	sender_cs.Unlock();
+	
 
 	receiver_cs.Lock();
 	if (mode == STOP_AND_WAIT) {

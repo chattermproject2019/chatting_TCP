@@ -498,6 +498,31 @@ UINT TXThread(LPVOID arg) // 메세지 보내는 스레드
 		Sleep(10);
 	}return 0;
 }
+
+UINT ack_send_thread(LPVOID arg) {
+	ThreadArg *pArg = (ThreadArg *)arg;
+	CStringList *plist = pArg->pList;
+	CUDPServer_thdDlg *pDlg = (CUDPServer_thdDlg *)pArg->pDlg;
+	while (pArg->Thread_run) {
+		while (!pDlg->ack_send_buffer.IsEmpty()) {
+			
+			ACK_Send_BUFFER_cs.Lock();
+			Data_socket_cs.Lock();
+			
+			std::cout << pDlg->ack_send_buffer.GetAt(0).seq << " 번 frame에 대한 (n)ack메세지를 보냅니다. (Piggy Back아님!)\n";
+			pDlg->m_pDataSocket->SendToEx((char*)&pDlg->ack_send_buffer.GetAt(0), sizeof(Packet), pDlg->peerPort, pDlg->peerIp, 0);
+			pDlg->ack_send_buffer.RemoveAt(0);
+			
+			Data_socket_cs.Unlock();
+			ACK_Send_BUFFER_cs.Unlock();// */
+			
+		}
+	}
+
+	return 0;
+}
+
+
 BOOL CUDPServer_thdDlg::OnInitDialog()
 {
 	CDialogEx::OnInitDialog();
@@ -583,9 +608,15 @@ BOOL CUDPServer_thdDlg::OnInitDialog()
 	arg3.pDlg = this;
 	arg3.frame_seq = -1;
 
-	pThread1 = AfxBeginThread(TXThread, (LPVOID)&arg1);
+	pThread1 = AfxBeginThread(TXThread, (LPVOID)&arg1, THREAD_PRIORITY_ABOVE_NORMAL);
 	pThread2 = AfxBeginThread(RXThread, (LPVOID)&arg2);
 	
+	CStringList* newlist4 = new CStringList;
+	arg4.pList = newlist4;
+	arg4.Thread_run = 1;
+	arg4.pDlg = this;
+	pThread4 = AfxBeginThread(ack_send_thread, (LPVOID)&arg4, THREAD_PRIORITY_BELOW_NORMAL); // ack 보내는 스레드
+
 
 	return TRUE;  // 포커스를 컨트롤에 설정하지 않으면 TRUE를 반환합니다.
 }
@@ -709,7 +740,7 @@ void CUDPServer_thdDlg::ProcessReceive(CDataSocket* pSocket, int nErrorCode)
 	// control packet인지 체크
 	if 	(calculatedChecksum==0 && newPacket->seq == 0xff && newPacket->total_sequence_number == 0xff && newPacket->data[2]== 0x7f && newPacket->data[3] == 0x7f && newPacket->data[4] == 0x7f && newPacket->data[5] == 0x7f) {
 		
-		AfxMessageBox(_T("현재 통신을 초기화합니다.."));
+		//AfxMessageBox(_T("현재 통신을 초기화합니다.."));
 		pThread1->SuspendThread(); //Tx stop
 		pThread2->SuspendThread(); // tx stop
 		packet_send_buffer.RemoveAll(); // 설정바꿔줄거라 되도록이면 buffer다 비워줍니다.
@@ -783,10 +814,11 @@ void CUDPServer_thdDlg::ProcessReceive(CDataSocket* pSocket, int nErrorCode)
 					AckPacket.checksum = checksum_packet(short_packet, sizeof(short_packet) / sizeof(short_packet[0]));
 					printf("보내려는 ack 패킷의 체크섬 %x", AckPacket.checksum);
 
-					Data_socket_cs.Lock();
+					ack_send_buffer.Add(AckPacket);
+					/*Data_socket_cs.Lock();
 					std::cout << newPacket->seq << " 번 frame에 대한 ack메세지를 보냅니다.\n";
 					m_pDataSocket->SendToEx((char*)&AckPacket, sizeof(Packet), peerPort, peerIp, 0);
-					Data_socket_cs.Unlock();
+					Data_socket_cs.Unlock();*/
 				}
 
 				//받은 packet에 대하여 48bit data추출
@@ -856,15 +888,16 @@ void CUDPServer_thdDlg::ProcessReceive(CDataSocket* pSocket, int nErrorCode)
 				ACK_Send_BUFFER_cs.Lock();
 				ack_send_buffer.Add(AckPacket); // ack패킷을 ack send버퍼에 추가합니다.
 				ACK_Send_BUFFER_cs.Unlock();
-				//Sleep(1); //되도록이면 piggy back하도록 살짝 지연해줍니다.
-				ACK_Send_BUFFER_cs.Lock();
-				if (!ack_send_buffer.IsEmpty()) { // ack 버퍼에 보낼 메세지가 있다면 보냅니다.
-					Data_socket_cs.Lock();
-					std::cout << newPacket->seq << " 번 frame에 대한 nack메세지를 보냅니다. (Piggy Back아님!)\n";
-					m_pDataSocket->SendToEx((char*)&AckPacket, sizeof(Packet), peerPort, peerIp, 0);
-					Data_socket_cs.Unlock();
-				}
-				ACK_Send_BUFFER_cs.Unlock();
+				Sleep(0); // 같은 혹은 높은 우선순위의 스레드에게 양보합니다.
+				/*ACK_Send_BUFFER_cs.Lock();
+				Data_socket_cs.Lock();
+				std::cout << ack_send_buffer.GetAt(0).seq << " 번 frame에 대한 (n)ack메세지를 보냅니다. (Piggy Back아님!)\n";
+				m_pDataSocket->SendToEx((char*)&ack_send_buffer.GetAt(0), sizeof(Packet), peerPort, peerIp, 0);
+				Data_socket_cs.Unlock();
+				ack_send_buffer.RemoveAt(0);
+				ACK_Send_BUFFER_cs.Unlock();*/
+				
+
 
 				//return; // 에러이고, ACK메세지도 아닌것으로 추정. 데이터 에러이므로 NACK보내고, 버림.
 			}
@@ -907,7 +940,7 @@ void CUDPServer_thdDlg::ProcessReceive(CDataSocket* pSocket, int nErrorCode)
 
 							AckPacket.response.ACK = current_error_frame; //받은 패킷번호
 							AckPacket.response.more = true; // 더 수신가능
-							AckPacket.response.no_error = true; // 에러없음
+							AckPacket.response.no_error = false; // 에러있음
 							AckPacket.total_sequence_number = 1; // ack메세지는 1개로 충분
 
 							AckPacket.checksum = 0;
@@ -918,16 +951,17 @@ void CUDPServer_thdDlg::ProcessReceive(CDataSocket* pSocket, int nErrorCode)
 							ACK_Send_BUFFER_cs.Lock();
 							ack_send_buffer.Add(AckPacket); // ack패킷을 ack send버퍼에 추가합니다.
 							ACK_Send_BUFFER_cs.Unlock();
-							//Sleep(1); //되도록이면 piggy back하도록 살짝 지연해줍니다.
-							ACK_Send_BUFFER_cs.Lock();
-							if (!ack_send_buffer.IsEmpty()) { // ack 버퍼에 보낼 메세지가 있다면 보냅니다.
-
-								Data_socket_cs.Lock();
-								std::cout << current_error_frame << " 번 frame에 대한 nack메세지를 보냅니다.(Piggy Back 아님!)\n";
-								m_pDataSocket->SendToEx((char*)&AckPacket, sizeof(Packet), peerPort, peerIp, 0);
-								Data_socket_cs.Unlock();
-							}
+							
+							Sleep(0); // 같은 혹은 높은 우선순위의 스레드에게 양보합니다.
+							/*ACK_Send_BUFFER_cs.Lock();
+							Data_socket_cs.Lock();
+							std::cout << ack_send_buffer.GetAt(0).seq << " 번 frame에 대한 (n)ack메세지를 보냅니다. (Piggy Back아님!)\n";
+							m_pDataSocket->SendToEx((char*)&ack_send_buffer.GetAt(0), sizeof(Packet), peerPort, peerIp, 0);
+							Data_socket_cs.Unlock();
+							ack_send_buffer.RemoveAt(0);
 							ACK_Send_BUFFER_cs.Unlock();
+*/
+							return;
 						}
 						else { // 이전에 에러가 일어나서 nack보내서, 순서대로 못받은 것이므로, 지금 것들은 다 무시합니다.
 							std::cout << "nack을 보냈으므로, 수정메세지 도착할때까지 연속되지 않은 frame 무시\n";
@@ -943,7 +977,7 @@ void CUDPServer_thdDlg::ProcessReceive(CDataSocket* pSocket, int nErrorCode)
 
 						AckPacket.response.ACK = current_error_frame; //받은 패킷번호
 						AckPacket.response.more = true; // 더 수신가능
-						AckPacket.response.no_error = true; // 에러없음
+						AckPacket.response.no_error = false; // 에러
 						AckPacket.total_sequence_number = 1; // ack메세지는 1개로 충분
 
 						AckPacket.checksum = 0;
@@ -955,16 +989,14 @@ void CUDPServer_thdDlg::ProcessReceive(CDataSocket* pSocket, int nErrorCode)
 						ack_send_buffer.Add(AckPacket); // ack패킷을 ack send버퍼에 추가합니다.
 						ACK_Send_BUFFER_cs.Unlock();
 						//Sleep(1); //되도록이면 piggy back하도록 살짝 지연해줍니다.
-						ACK_Send_BUFFER_cs.Lock();
-						if (!ack_send_buffer.IsEmpty()) { // ack 버퍼에 보낼 메세지가 있다면 보냅니다.
-
-							Data_socket_cs.Lock();
-							std::cout << current_error_frame << " 번 frame에 대한 nack메세지를 보냅니다.(Piggy Back 아님!)\n";
-							m_pDataSocket->SendToEx((char*)&AckPacket, sizeof(Packet), peerPort, peerIp, 0);
-							Data_socket_cs.Unlock();
-
-						}
-						ACK_Send_BUFFER_cs.Unlock();
+						Sleep(0); // 같은 혹은 높은 우선순위의 스레드에게 양보합니다.
+						/*ACK_Send_BUFFER_cs.Lock();
+						Data_socket_cs.Lock();
+						std::cout << ack_send_buffer.GetAt(0).seq << " 번 frame에 대한 (n)ack메세지를 보냅니다. (Piggy Back아님!)\n";
+						m_pDataSocket->SendToEx((char*)&ack_send_buffer.GetAt(0), sizeof(Packet), peerPort, peerIp, 0);
+						Data_socket_cs.Unlock();
+						ack_send_buffer.RemoveAt(0);
+						ACK_Send_BUFFER_cs.Unlock();*/
 
 						return; // nack 보넀으므로 더이상 데이터관련 처리를 하지 않습ㄴㅣ다
 					}
@@ -1009,16 +1041,17 @@ void CUDPServer_thdDlg::ProcessReceive(CDataSocket* pSocket, int nErrorCode)
 					ACK_Send_BUFFER_cs.Lock();
 					ack_send_buffer.Add(AckPacket); // ack패킷을 ack send버퍼에 추가합니다.
 					ACK_Send_BUFFER_cs.Unlock();
-					//Sleep(1); //되도록이면 piggy back하도록 살짝 지연해줍니다.
-					ACK_Send_BUFFER_cs.Lock();
-					if (!ack_send_buffer.IsEmpty()) { // ack 버퍼에 보낼 메세지가 있다면 보냅니다.
 
-						Data_socket_cs.Lock();
-						std::cout << newPacket->seq << " 번 frame 까지에 대한 ack메세지를 보냅니다.(Piggy Back 아님!)\n";
-						m_pDataSocket->SendToEx((char*)&AckPacket, sizeof(Packet), peerPort, peerIp, 0);
-						Data_socket_cs.Unlock();
-					}
-					ACK_Send_BUFFER_cs.Unlock();
+					Sleep(0); // 같은 혹은 높은 우선순위의 스레드에게 양보합니다.
+				/*ACK_Send_BUFFER_cs.Lock();
+				Data_socket_cs.Lock();
+				std::cout << ack_send_buffer.GetAt(0).seq << " 번 frame에 대한 (n)ack메세지를 보냅니다. (Piggy Back아님!)\n";
+				m_pDataSocket->SendToEx((char*)&ack_send_buffer.GetAt(0), sizeof(Packet), peerPort, peerIp, 0);
+				Data_socket_cs.Unlock();
+				ack_send_buffer.RemoveAt(0);
+				ACK_Send_BUFFER_cs.Unlock();*/
+					//Sleep(1); //되도록이면 piggy back하도록 살짝 지연해줍니다.
+
 				}
 
 				if (packet_receive_buffer.GetSize() == newPacket->total_sequence_number) { // 1:1이므로 받은거에 들어있는거 바로체크해도됨

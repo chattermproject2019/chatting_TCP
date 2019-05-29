@@ -67,8 +67,8 @@ protected:
 	afx_msg HCURSOR OnQueryDragIcon();
 	DECLARE_MESSAGE_MAP()
 public:
-	CWinThread *pThread1, *pThread2, *timerThread; //스레드 객체 주소
-	ThreadArg arg1, arg2; //스레드 전달 인자
+	CWinThread *pThread1, *pThread2, *timerThread, *pThread4; //스레드 객체 주소
+	ThreadArg arg1, arg2, arg4; //스레드 전달 인자
 	timerThreadArg arg3; // 타이머 스레드 인수
 
 
@@ -109,7 +109,7 @@ public:
 
 	CArray<Packet> ack_send_buffer; // ack메세지를 보내야 하는경우, 이 버퍼에 저장했다가 보냅니다.
 
-	CArray<int> error_buffer; // Selective Reject용 에러버퍼, 에러가 난 frame seq를 저장합니다.
+	//CArray<int> error_buffer; // Selective Reject용 에러버퍼, 에러가 난 frame seq를 저장합니다.
 
 	BOOL timer_id_checker[1000] = {0,};
 	BOOL mRadio;

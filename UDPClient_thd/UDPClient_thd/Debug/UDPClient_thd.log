@@ -9,9 +9,15 @@ c:\users\대현\desktop\chatting_tcp\udpclient_thd\udpclient_thd\udpclient_thddl
 c:\users\대현\desktop\chatting_tcp\udpclient_thd\udpclient_thd\udpclient_thddlg.cpp(363): warning C4805: '==': 연산에 'BOOL' 형식과 'bool' 형식을 함께 사용하는 것은 안전하지 않습니다.
 c:\users\대현\desktop\chatting_tcp\udpclient_thd\udpclient_thd\udpclient_thddlg.cpp(450): warning C4805: '==': 연산에 'BOOL' 형식과 'bool' 형식을 함께 사용하는 것은 안전하지 않습니다.
 c:\users\대현\desktop\chatting_tcp\udpclient_thd\udpclient_thd\udpclient_thddlg.cpp(482): warning C4805: '==': 연산에 'BOOL' 형식과 'bool' 형식을 함께 사용하는 것은 안전하지 않습니다.
-c:\users\대현\desktop\chatting_tcp\udpclient_thd\udpclient_thd\udpclient_thddlg.cpp(1124): warning C4244: '=': 'unsigned short'에서 'unsigned char'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-c:\users\대현\desktop\chatting_tcp\udpclient_thd\udpclient_thd\udpclient_thddlg.cpp(1125): warning C4244: '=': 'unsigned short'에서 'unsigned char'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-c:\users\대현\desktop\chatting_tcp\udpclient_thd\udpclient_thd\udpclient_thddlg.cpp(1158): warning C4101: 'dwRead' :참조되지 않은 지역 변수입니다.
+c:\users\대현\desktop\chatting_tcp\udpclient_thd\udpclient_thd\udpclient_thddlg.cpp(1154): warning C4244: '=': 'unsigned short'에서 'unsigned char'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+c:\users\대현\desktop\chatting_tcp\udpclient_thd\udpclient_thd\udpclient_thddlg.cpp(1155): warning C4244: '=': 'unsigned short'에서 'unsigned char'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+c:\users\대현\desktop\chatting_tcp\udpclient_thd\udpclient_thd\udpclient_thddlg.cpp(1188): warning C4101: 'dwRead' :참조되지 않은 지역 변수입니다.
+  코드를 생성하고 있습니다...
+  컴파일하고 있습니다...
+  UDPClient_thd.cpp
+  코드를 생성하고 있습니다...
+  건너뛰고 있습니다... (관련된 변경 내용 없음)
+  DataSocket.cpp
 stdafx.obj : warning LNK4258: '/entry:WinMainCRTStartup' 지시문은 '/ENTRY:wWinMainCRTStartup' 스위치와 호환되지 않습니다. 무시됩니다.
   UDPClient_thd.vcxproj -> C:\Users\대현\Desktop\chatting_TCP\UDPClient_thd\Debug\UDPClient_thd.exe
   UDPClient_thd.vcxproj -> C:\Users\대현\Desktop\chatting_TCP\UDPClient_thd\Debug\UDPClient_thd.pdb (Partial PDB)

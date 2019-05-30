@@ -274,15 +274,16 @@ UINT TXThread(LPVOID arg) // 메세지 보내는 스레드
 	while (pArg->Thread_run)
 	{
 		POSITION pos = plist->GetHeadPosition();
-		POSITION current_pos;
+		POSITION current_pos= NULL;
 
-		while (pos != NULL)
-		{
-			current_pos = pos;
+		//while (pos != NULL)
+		if (pos != NULL) {
 			tx_cs.Lock();
+			current_pos = pos;
+			
 			CString str = plist->GetNext(pos); // 클릭했을때 문자열이 plist에 담김, 그걸 str로 가져옴
 			pDlg->packetSegmentation(str); /// 그 CString str에 대해 segmentation하여 pack버퍼에 넣음
-			tx_cs.Unlock();
+			
 
 			// message가 여러개의 frame으로 쪼개진 상황
 
@@ -290,15 +291,23 @@ UINT TXThread(LPVOID arg) // 메세지 보내는 스레드
 			pDlg->m_tx_edit.GetWindowText(message);
 			message += "\r\n";
 			pDlg->m_tx_edit.SetWindowTextW(message);
+			pDlg->m_tx_edit.LineScroll(pDlg->m_tx_edit.GetLineCount());
+			plist->RemoveAt(current_pos);
+			tx_cs.Unlock();
 
-			
-
+		}
+		while (!pDlg->packet_send_buffer.IsEmpty() || !pDlg->ack_send_buffer.IsEmpty())
+		{
+	
 			if (pDlg->mode == STOP_AND_WAIT) {
 				//while(!pDlg->packet_send_buffer.IsEmpty()){ // 패킷버퍼에 뭔가있으면 보냄
-				for (int i = 0; i < pDlg->packet_send_buffer.GetSize(); ++i) {
+				for (int i = 0; i < pDlg->packet_send_buffer.GetSize();) {
+
+
+
 					//(char*)& 안해주면 구조체 못보냄. 수신단도 저렇게 받아줘야함
 					pDlg->timeout = false;
-					std::cout << pDlg->packet_send_buffer.GetAt(i).seq << " 번 frame을 보냅니다.\n";
+					//std::cout << pDlg->packet_send_buffer.GetAt(i).seq << " 번 frame을 보냅니다.\n";
 					Data_socket_cs.Lock();
 					pDlg->m_pDataSocket->SendToEx((char*)&pDlg->packet_send_buffer.GetAt(i), sizeof(Packet), pDlg->peerPort, pDlg->peerIp, 0);
 					Data_socket_cs.Unlock();
@@ -338,31 +347,32 @@ UINT TXThread(LPVOID arg) // 메세지 보내는 스레드
 						if (pDlg->ack_receive_buffer.GetAt(0) > 0) { // 받은 메세지가 ack였다
 							std::cout << "ack메세지를 받았으므로, 보냈던 " << pDlg->ack_receive_buffer.GetAt(0) << "번 frame을 확정짓습니다.\n";
 							pDlg->ack_receive_buffer.RemoveAt(0); // ack 수신확인한거 clear
-																  //pArg->frame_seq; // 그대로있어야 tx에서 i++되서 다음 seq로 넘어감
+							++i;								  //pArg->frame_seq; // 그대로있어야 tx에서 i++되서 다음 seq로 넘어감
 						}
 						else if ((pDlg->ack_receive_buffer.GetAt(0) < 0)) { // 받은메세지가 nack였으면 똑같은거 한번 더 보냄
 							std::cout << "nack메세지를 받았으므로 보냈던" << -1 * pDlg->ack_receive_buffer.GetAt(0) << "번 frame을 다시 보냅니다.\n";
-							--i;
+							//--i;
 							//pArg->frame_seq--; // 한번 더 보내기 위해
 							pDlg->ack_receive_buffer.RemoveAt(0); // ack 수신확인한거 clear
 																  //break; // 똑같은(nack) frame보내기위해 break;
 						}
 					}
 					else if (pDlg->timeout == true) { // 비록 ack메세지는 못받았지만, timeout은 패킷loss이므로 재전송해줘야함
-						std::cout << "timeout이므로 받았으므로 보냈던 " << pDlg->packet_send_buffer.GetAt(i).seq << "번 frame을 다시 보냅니다.\n";
+						std::cout << "timeout이므로 보냈던 " << pDlg->packet_send_buffer.GetAt(i).seq << "번 frame을 다시 보냅니다.\n";
 						//pArg->frame_seq--; // 한번 더 보내기 위해
-						i--;
+						//i--;
 					}
 
 				}
 
 			}
 			else if (pDlg->mode == GO_BACK_N) {
+
 				//while(!pDlg->packet_send_buffer.IsEmpty()){ // 패킷버퍼에 뭔가있으면 보냄
 				int current_frame = 1;
 				int before_frame = 0;// window가 이동하기 전 frame seq
 				for (int i = 0; i < pDlg->packet_send_buffer.GetSize(); ++i) {
-					//(char*)& 안해주면 구조체 못보냄. 수신단도 저렇게 받아줘야함
+
 					pDlg->timeout = false;
 
 					// 보내야하는 ack메세지가 있으면 지금 보내는 패킷의 정보에 포함시키고, 제거합니다.
@@ -375,13 +385,14 @@ UINT TXThread(LPVOID arg) // 메세지 보내는 스레드
 					else {
 						std::cout << pDlg->packet_send_buffer.GetAt(i).seq << " 번 frame을 보냅니다.(Piggy Back 아님!)\n";
 					}
+					ACK_Send_BUFFER_cs.Unlock();
 
 
-
+					//pDlg->packet_send_buffer.GetAt(i)
 					Data_socket_cs.Lock();
 					pDlg->m_pDataSocket->SendToEx((char*)&pDlg->packet_send_buffer.GetAt(i), sizeof(Packet), pDlg->peerPort, pDlg->peerIp, 0);
 					Data_socket_cs.Unlock();
-					ACK_Send_BUFFER_cs.Unlock();
+
 
 					if (current_frame < pDlg->window_size && //// window size만큼 보냅니다.
 						i + pDlg->window_size <= pDlg->packet_send_buffer.GetSize()) { // 그리고 남은량이 windowsize보다 작아야합니다.
@@ -402,12 +413,11 @@ UINT TXThread(LPVOID arg) // 메세지 보내는 스레드
 							else {
 								std::cout << pDlg->packet_send_buffer.GetAt(j).seq << " 번 frame을 보냅니다.(Piggy Back 아님!)\n";
 							}
-
+							ACK_Send_BUFFER_cs.Unlock();
 
 							Data_socket_cs.Lock();
 							pDlg->m_pDataSocket->SendToEx((char*)&pDlg->packet_send_buffer.GetAt(j), sizeof(Packet), pDlg->peerPort, pDlg->peerIp, 0);
 							Data_socket_cs.Unlock();
-							ACK_Send_BUFFER_cs.Unlock();
 
 							++i; // i도 증가시켜줍니다.
 						}
@@ -445,7 +455,6 @@ UINT TXThread(LPVOID arg) // 메세지 보내는 스레드
 					pDlg->StopTimer(pDlg->arg3.timer_id); //timer종료 
 					pDlg->timer_id_checker[timer_id] = false;
 
-
 					if (!pDlg->ack_receive_buffer.IsEmpty()) { // ack 버퍼에 무언가가 도착했음.
 						ACK_Receive_BUFFER_cs.Lock();
 						//std::cout << "ack메세지감지\n";
@@ -469,7 +478,7 @@ UINT TXThread(LPVOID arg) // 메세지 보내는 스레드
 						ACK_Receive_BUFFER_cs.Unlock();
 					}
 					else if (pDlg->timeout == true) { // 비록 ack메세지는 못받았지만, timeout은 패킷loss이므로 재전송해줘야함
-						std::cout << "timeout이므로 받았으므로 보냈던 " << before_frame + 1 << "번 frame부터 다시 보냅니다.\n";
+						std::cout << "timeout이므로 보냈던 " << before_frame + 1 << "번 frame부터 다시 보냅니다.\n";
 						//pArg->frame_seq--; // 한번 더 보내기 위해
 						//i--;
 
@@ -485,42 +494,37 @@ UINT TXThread(LPVOID arg) // 메세지 보내는 스레드
 
 				}
 
+				while (!pDlg->ack_send_buffer.IsEmpty()) { // 위에서 piggy back되지 않았다면, 그냥 ack메세지 보내줍니다.
+
+														   //if (!pDlg->packet_send_buffer.IsEmpty()) {// 혹여나 도중에 packet data보낼게 생기면 이 for문을 종료하고, 위에서 piggyback되도록합니다.
+														   //	break;
+														   //}
+
+					ACK_Send_BUFFER_cs.Lock();
+					if (!pDlg->ack_send_buffer.IsEmpty()) {
+						std::cout << pDlg->ack_send_buffer.GetAt(0).response.ACK << " 번 ack를 보냅니다.(no PiggyBack)\n";
+						Data_socket_cs.Lock();
+						pDlg->m_pDataSocket->SendToEx((char*)&pDlg->ack_send_buffer.GetAt(0), sizeof(Packet), pDlg->peerPort, pDlg->peerIp, 0);
+						Data_socket_cs.Unlock();
+						pDlg->ack_send_buffer.RemoveAt(0);
+					}
+					ACK_Send_BUFFER_cs.Unlock();
+				}
 			}
-		
+
+
 
 			pDlg->packet_send_buffer.RemoveAll(); // for문이기 때문에 다보냈으면 다 제거
 
-												  //pDlg->m_pDataSocket->SendToEx(str, (str.GetLength() + 1) * sizeof(TCHAR), pDlg->peerPort, pDlg->peerIp, 0); ///UDP소켓을 통하여 해당 포트와 ip주소로 메세지를 전송합니다.
-			pDlg->m_tx_edit.LineScroll(pDlg->m_tx_edit.GetLineCount());
-
-			plist->RemoveAt(current_pos);
 		}
+
+		//pDlg->m_pDataSocket->SendToEx(str, (str.GetLength() + 1) * sizeof(TCHAR), pDlg->peerPort, pDlg->peerIp, 0); ///UDP소켓을 통하여 해당 포트와 ip주소로 메세지를 전송합니다.
+		
 		Sleep(10);
 	}return 0;
 }
 
-UINT ack_send_thread(LPVOID arg) {
-	ThreadArg *pArg = (ThreadArg *)arg;
-	CStringList *plist = pArg->pList;
-	CUDPServer_thdDlg *pDlg = (CUDPServer_thdDlg *)pArg->pDlg;
-	while (pArg->Thread_run) {
-		while (!pDlg->ack_send_buffer.IsEmpty()) {
-			
-			ACK_Send_BUFFER_cs.Lock();
-			Data_socket_cs.Lock();
-			
-			std::cout << pDlg->ack_send_buffer.GetAt(0).seq << " 번 frame에 대한 (n)ack메세지를 보냅니다. (Piggy Back아님!)\n";
-			pDlg->m_pDataSocket->SendToEx((char*)&pDlg->ack_send_buffer.GetAt(0), sizeof(Packet), pDlg->peerPort, pDlg->peerIp, 0);
-			pDlg->ack_send_buffer.RemoveAt(0);
-			
-			Data_socket_cs.Unlock();
-			ACK_Send_BUFFER_cs.Unlock();// */
-			
-		}
-	}
 
-	return 0;
-}
 
 
 BOOL CUDPServer_thdDlg::OnInitDialog()
@@ -611,13 +615,7 @@ BOOL CUDPServer_thdDlg::OnInitDialog()
 	pThread1 = AfxBeginThread(TXThread, (LPVOID)&arg1, THREAD_PRIORITY_ABOVE_NORMAL);
 	pThread2 = AfxBeginThread(RXThread, (LPVOID)&arg2);
 	
-	CStringList* newlist4 = new CStringList;
-	arg4.pList = newlist4;
-	arg4.Thread_run = 1;
-	arg4.pDlg = this;
-	pThread4 = AfxBeginThread(ack_send_thread, (LPVOID)&arg4, THREAD_PRIORITY_BELOW_NORMAL); // ack 보내는 스레드
-
-
+	
 	return TRUE;  // 포커스를 컨트롤에 설정하지 않으면 TRUE를 반환합니다.
 }
 
@@ -775,7 +773,7 @@ void CUDPServer_thdDlg::ProcessReceive(CDataSocket* pSocket, int nErrorCode)
 			if (newPacket->response.ACK != 0) { // ACK로 추정되는 메세지가 checksum에러일 경우. 무시해서 expire되게한다.
 				return;
 			}
-			else { // 에러인데 ACK메세지가 아니라고 추정되면, 데이터패킷이 에러인걸로 간주하고 NACK메세지를 보낸다.
+			if ( newPacket->seq!=0 ) { // 에러인데 ACK메세지가 아니라고 추정되면, 데이터패킷이 에러인걸로 간주하고 NACK메세지를 보낸다.
 
 				cout << "데이터 패킷이 에러이므로, 일부러 timer expire 해서 다시 재전송시킴.\n";
 
@@ -801,7 +799,7 @@ void CUDPServer_thdDlg::ProcessReceive(CDataSocket* pSocket, int nErrorCode)
 				return; //piggy back아니므로 ack만 확인하고 버림
 			}
 
-			else { // ack메세지 아니므로 data 수신처리 
+			if(newPacket->seq != 0) { // ack메세지 아니므로 data 수신처리 
 
 
 				if (newPacket->seq != 0) { // 데이터를 받았으면, 확인메세지를 보냅니다.
@@ -812,13 +810,12 @@ void CUDPServer_thdDlg::ProcessReceive(CDataSocket* pSocket, int nErrorCode)
 					AckPacket.checksum = 0;
 					unsigned short* short_packet = (unsigned short*)&AckPacket;
 					AckPacket.checksum = checksum_packet(short_packet, sizeof(short_packet) / sizeof(short_packet[0]));
-					printf("보내려는 ack 패킷의 체크섬 %x", AckPacket.checksum);
+					printf("보내려는 ack 패킷의 체크섬 %x\n", AckPacket.checksum);
 
-					ack_send_buffer.Add(AckPacket);
-					/*Data_socket_cs.Lock();
+					Data_socket_cs.Lock();
 					std::cout << newPacket->seq << " 번 frame에 대한 ack메세지를 보냅니다.\n";
 					m_pDataSocket->SendToEx((char*)&AckPacket, sizeof(Packet), peerPort, peerIp, 0);
-					Data_socket_cs.Unlock();*/
+					Data_socket_cs.Unlock();
 				}
 
 				//받은 packet에 대하여 48bit data추출

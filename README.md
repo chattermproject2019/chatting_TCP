@@ -9,8 +9,6 @@ Reassembly [x]
 
 ""입력 제한 [x]
 
-Port 입력받는칸 만들기 []
-
 상대 IP 출력 text box 만들기 [x]
 
 Checksum [x]
@@ -26,8 +24,6 @@ Sliding_window [x]
 Go Back N [x]
 
 PiggyBack [x]
-
-Selective Reject []
 
 File Transmission []
 

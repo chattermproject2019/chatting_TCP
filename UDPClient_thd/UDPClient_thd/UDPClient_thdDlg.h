@@ -67,8 +67,8 @@ protected:
 	afx_msg HCURSOR OnQueryDragIcon();
 	DECLARE_MESSAGE_MAP()
 public:
-	CWinThread *pThread1, *pThread2, *timerThread, *pThread4; //스레드 객체 주소
-	ThreadArg arg1, arg2, arg4; //스레드 전달 인자
+	CWinThread *pThread1, *pThread2, *timerThread; //스레드 객체 주소
+	ThreadArg arg1, arg2; //스레드 전달 인자
 	timerThreadArg arg3; // 타이머 스레드 인수
 
 

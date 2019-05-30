@@ -750,10 +750,35 @@ void CUDPServer_thdDlg::ProcessReceive(CDataSocket* pSocket, int nErrorCode)
 
 		mode = newPacket->data[0];
 		std::string mode_name = mode == 0 ? "STOP_AND_WAIT" : "GO_BACK_N";
-		window_size = newPacket->data[1];
-		std::string str_temp2 = ( std::string("mode: ") + mode_name + std::string("\nwindow size: ") + std::to_string(window_size).c_str() + std::string(("\n동기화되었습니다.")));
+		std::string str_temp2;
+		if (mode == 0) {
+			str_temp2 = (std::string("mode: ") + mode_name +  std::string(("\n동기화되었습니다.")));
+		}
+		else if (mode == 1) {
+			window_size = newPacket->data[1];
+			str_temp2 = (std::string("mode: ") + mode_name + std::string("\nwindow size: ") + std::to_string(window_size).c_str() + std::string(("\n동기화되었습니다.")));
+		}
 		AfxMessageBox(CString(str_temp2.c_str()));
 		
+		// control 메세지에 대한 ack를 보냅니다.
+
+		Packet control_packet = Packet(); // 제어메세지를 전달합니다.
+										  // 몇개의 flag들을 정상적이지 않은 걸로 바꿔주고, control용으로 씁니다.
+		control_packet.checksum = 0;
+		control_packet.seq = 0xff;
+		control_packet.total_sequence_number = 0xff;
+		memset(control_packet.data, 0x7f, sizeof(control_packet.data));
+		control_packet.data[0] = mode;
+		control_packet.data[1] = window_size;
+
+		unsigned short* short_packet = (unsigned short*)&control_packet;//Packet to unsigned short*
+		control_packet.checksum = checksum_packet(short_packet, sizeof(short_packet) / sizeof(short_packet[0]));
+		//packet_send_buffer.Add(control_packet);
+		Data_socket_cs.Lock();
+		std::cout << " control 메세지를 보냅니다.\n";
+		m_pDataSocket->SendToEx((char*)&control_packet, sizeof(Packet), peerPort, peerIp, 0);
+		Data_socket_cs.Unlock();
+
 		return;
 	}
 	

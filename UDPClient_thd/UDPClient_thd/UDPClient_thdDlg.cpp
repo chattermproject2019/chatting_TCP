@@ -752,7 +752,15 @@ void CUDPClient_thdDlg::ProcessReceive(CDataSocket* pSocket, int nErrorCode)
 	unsigned short calculatedChecksum = checksum_packet(short_packet, sizeof(short_packet) / sizeof(short_packet[0]));
 	printf("받은 패킷의 체크섬 %x, 계산한 체크섬 값: %x \n", newPacket->checksum, calculatedChecksum);
 
-	
+	// control packet ack인지 체크
+	if (calculatedChecksum == 0 && newPacket->seq == 0xff && newPacket->total_sequence_number == 0xff && newPacket->data[2] == 0x7f && newPacket->data[3] == 0x7f && newPacket->data[4] == 0x7f && newPacket->data[5] == 0x7f && 
+		control_packet_checker==true) { 
+		// control packet을 보낸상태여야합니다.
+		control_packet_checker = false; //다시바꿔줍니다, 받았다는것을 알려줘야하기때문
+		AfxMessageBox(_T("적용이 완료되었습니다\n"));
+		return;
+
+	}
 
 	if(  mode == STOP_AND_WAIT){
 		
@@ -1109,7 +1117,6 @@ void CUDPClient_thdDlg::OnBnClickedButton1() // 적용버튼이 눌리면,
 		pThread1->ResumeThread();// 스레드 재시작
 		pThread2->ResumeThread(); // 스레드 재시작
 		//std::cout << packet_send_buffer.IsEmpty() << packet_receive_buffer.IsEmpty() << ack_receive_buffer.IsEmpty() << ack_send_buffer.IsEmpty() << endl;
-
 		
 	}
 	
@@ -1151,14 +1158,37 @@ void CUDPClient_thdDlg::OnBnClickedButton1() // 적용버튼이 눌리면,
 	control_packet.checksum = checksum_packet(short_packet, sizeof(short_packet) / sizeof(short_packet[0]));
 
 
-	//packet_send_buffer.Add(control_packet);
+	control_packet_checker = true; // control 패킷을 보냄
+
 	Data_socket_cs.Lock();
 	std::cout << " control 메세지를 보냅니다.\n";
 	m_pDataSocket->SendToEx((char*)&control_packet, sizeof(Packet), peerPort, peerIp, 0);
 	Data_socket_cs.Unlock();
 
+	int timer_id = (int)(rand() % 1000); // 랜덤으로 id 생성, 중복되지 않게 수정하기
+	while (timer_id_checker[timer_id]) { timer_id = (int)(rand() * 1000); }
+	timer_id_checker[timer_id] = true;
 
-	AfxMessageBox(_T("적용완료."));
+	timeout = false;
+	arg3.deadline = 1000; // 1초가 deadline입니다.
+	arg3.timer_id = timer_id;
+	//타이머 스레드 바로 시작.
+
+	timerThread = AfxBeginThread(timer_thread_func, (LPVOID)&arg3, NULL);
+
+	//pDlg->StartTimer(timer_id, pDlg->arg3.deadline); // 타이머 시작, deadline주기로 OnTime함수 실행
+
+	while (!control_packet_checker) { // 컨트롤 패킷을 받지 않는상태면 계속돌아감
+		if (timeout == true) { // 버퍼에 아무것도 없는 상태로, 시간지나면 expire
+			std::cout << "Expired!\n";
+			break;
+		}
+	}
+
+	//위while문을 빠져나오는 경우는 ack버퍼에 무언가 추가 되었거나, timeout되었거나 둘중하나임
+	StopTimer(arg3.timer_id); //timer종료 
+	timer_id_checker[timer_id] = false;
+	
 
 }
 

@@ -11,6 +11,5 @@ c:\users\대현\desktop\chatting_tcp\udpserver_thd\udpserver_thd\udpserver_thddl
 c:\users\대현\desktop\chatting_tcp\udpserver_thd\udpserver_thd\udpserver_thddlg.cpp(480): warning C4805: '==': 연산에 'BOOL' 형식과 'bool' 형식을 함께 사용하는 것은 안전하지 않습니다.
 c:\users\대현\desktop\chatting_tcp\udpserver_thd\udpserver_thd\udpserver_thddlg.cpp(771): warning C4244: '=': 'unsigned short'에서 'unsigned char'(으)로 변환하면서 데이터가 손실될 수 있습니다.
 c:\users\대현\desktop\chatting_tcp\udpserver_thd\udpserver_thd\udpserver_thddlg.cpp(772): warning C4244: '=': 'unsigned short'에서 'unsigned char'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-stdafx.obj : warning LNK4258: '/entry:WinMainCRTStartup' 지시문은 '/ENTRY:wWinMainCRTStartup' 스위치와 호환되지 않습니다. 무시됩니다.
   UDPServer_thd.vcxproj -> C:\Users\대현\Desktop\chatting_TCP\UDPServer_thd\Debug\UDPServer_thd.exe
   UDPServer_thd.vcxproj -> C:\Users\대현\Desktop\chatting_TCP\UDPServer_thd\Debug\UDPServer_thd.pdb (Partial PDB)

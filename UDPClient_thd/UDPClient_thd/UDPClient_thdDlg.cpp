@@ -120,7 +120,6 @@ std::string CString_to_BinaryStr(CString message) { // CString 으로 반환하�
 }
 
 std::string BinaryStr_to_CString(std::string binary_message) {
-	//CString res = _T("");
 	//std::string line = CT2CA(binary_message);
 	////std::cout << "Enter binary string: ";
 	std::string line = binary_message;
@@ -131,7 +130,7 @@ std::string BinaryStr_to_CString(std::string binary_message) {
 		correct = std::all_of(line.begin(), line.end(), [](char c){return c =='1'||c=='0';});
 		if (!correct)
 			return ("");
-		//	//std::cout << "error, print only 1's or 0's: ";
+		//std::cout << "error, print only 1's or 0's: ";
 	}
 	std::istringstream in(line);
 	std::bitset<8> bs; // 8bit
@@ -226,9 +225,7 @@ void CUDPClient_thdDlg::packetSegmentation(CString message) {
 
 
 	//arg1.Thread_run = false;
-
 	//std::cout << "\n";
-
 }
 
 // CUDPClient_thdDlg 메시지 처리기
@@ -472,7 +469,6 @@ UINT TXThread(LPVOID arg) //TXThread 함수 정의
 						
 							//std::cout << "ack메세지를 받았으므로, 보냈던 " << pDlg->ack_receive_buffer.GetAt(0) << "번 frame 까지 확정짓습니다.\n";
 							pDlg->ack_receive_buffer.RemoveAt(0); // ack 수신확인한거 clear
-						
 							//그대로 진행~
 						}
 						else if ((pDlg->ack_receive_buffer.GetAt(0) < 0)) { // 받은메세지가 nack였으면 똑같은거 한번 더 보냄

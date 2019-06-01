@@ -117,7 +117,6 @@ std::string CString_to_BinaryStr(CString message) { // CString 으로 반환하면 hex
 }
 
 std::string BinaryStr_to_CString(std::string binary_message) {
-	//CString res = _T("");
 	//std::string line = CT2CA(binary_message);
 	////std::cout << "Enter binary string: ";
 	std::string line = binary_message;
@@ -496,10 +495,6 @@ UINT TXThread(LPVOID arg) // 메세지 보내는 스레드
 
 				while (!pDlg->ack_send_buffer.IsEmpty()) { // 위에서 piggy back되지 않았다면, 그냥 ack메세지 보내줍니다.
 
-														   //if (!pDlg->packet_send_buffer.IsEmpty()) {// 혹여나 도중에 packet data보낼게 생기면 이 for문을 종료하고, 위에서 piggyback되도록합니다.
-														   //	break;
-														   //}
-
 					ACK_Send_BUFFER_cs.Lock();
 					if (!pDlg->ack_send_buffer.IsEmpty()) {
 						//std::cout << pDlg->ack_send_buffer.GetAt(0).response.ACK << " 번 ack를 보냅니다.(no PiggyBack)\n";
@@ -518,8 +513,6 @@ UINT TXThread(LPVOID arg) // 메세지 보내는 스레드
 
 		}
 
-		//pDlg->m_pDataSocket->SendToEx(str, (str.GetLength() + 1) * sizeof(TCHAR), pDlg->peerPort, pDlg->peerIp, 0); ///UDP소켓을 통하여 해당 포트와 ip주소로 메세지를 전송합니다.
-		
 		Sleep(10);
 	}return 0;
 }
@@ -563,9 +556,6 @@ BOOL CUDPServer_thdDlg::OnInitDialog()
 
 	CString myIp = _T("127.0.0.1");
 	int myPort = 6789;
-	
-	/*CString str123 = _T("123127787594735479749357479579479473");
-	//std::cout << sizeof(str123) << "\n";*/
 
 	memset(timer_id_checker,false, sizeof(timer_id_checker));
 
@@ -812,7 +802,6 @@ void CUDPServer_thdDlg::ProcessReceive(CDataSocket* pSocket, int nErrorCode)
 			   /*Stop & Wait ACK메세지 수신하는 경우*/
 			if (newPacket->response.ACK != 0) {
 				//std::cout << "ACK메세지도착: 에러여부: " << newPacket->response.no_error << " 해당frame 번호: " << newPacket->response.ACK << " 계속수신가능여부: " << newPacket->response.no_error << "\n";
-
 				// ack수신할때마다 send부분에 알려줘야함. 1개의 frame씩 보내기 때문에.
 				if (newPacket->response.no_error == true) { // ACK 
 					ack_receive_buffer.Add(newPacket->response.ACK); // 정상적으로 받은 frame넘버를 저장.
@@ -919,7 +908,6 @@ void CUDPServer_thdDlg::ProcessReceive(CDataSocket* pSocket, int nErrorCode)
 				ack_send_buffer.RemoveAt(0);
 				ACK_Send_BUFFER_cs.Unlock();
 				Data_socket_cs.Unlock();*/
-
 
 				//return; // 에러이고, ACK메세지도 아닌것으로 추정. 데이터 에러이므로 NACK보내고, 버림.
 			}

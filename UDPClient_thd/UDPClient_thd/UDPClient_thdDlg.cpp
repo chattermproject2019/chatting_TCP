@@ -31,7 +31,7 @@ CCriticalSection ACK_Receive_BUFFER_cs; // ACK메세지를 수신했는지를 �
 CCriticalSection ACK_Send_BUFFER_cs; // ACK메세지를 보낼것이 있는지를 체크하기위한 cs.
 //CCriticalSection sequence_cs; // 다음 seq number, timer스레드에서 중복해서 수정하게 하지 않기 위함.
 
-// 응용 프로그램 정보에 사용되는 CAboutDlg 대화 상자입니다.
+// 응용 프로그램 정보에 사용되는 CAboutDlg 대화 상자입니다..
 
 class CAboutDlg : public CDialogEx
 {

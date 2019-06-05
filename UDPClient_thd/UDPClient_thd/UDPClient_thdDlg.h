@@ -116,7 +116,7 @@ public:
 	afx_msg void OnBnClickedButton1();
 	CEdit m_windowSize;
 	int m_windowSzie_val;
-	afx_msg void OnBnClickedOpen();
+	//afx_msg void OnBnClickedOpen();
 
 	bool control_packet_checker = false; // 컨트롤 메세지를 보내서 받았는지 판단합니다.
 

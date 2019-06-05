@@ -96,7 +96,7 @@ BEGIN_MESSAGE_MAP(CUDPClient_thdDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_CLOSE, &CUDPClient_thdDlg::OnBnClickedClose)
 	ON_WM_TIMER()
 	ON_BN_CLICKED(IDC_BUTTON1, &CUDPClient_thdDlg::OnBnClickedButton1)
-	ON_BN_CLICKED(IDC_Open, &CUDPClient_thdDlg::OnBnClickedOpen)
+//	ON_BN_CLICKED(IDC_Open, &CUDPClient_thdDlg::OnBnClickedOpen) //파일전송
 END_MESSAGE_MAP()
 
 
@@ -561,9 +561,9 @@ BOOL CUDPClient_thdDlg::OnInitDialog()
 
 	/// TODO: 여기에 추가 초기화 작업을 추가합니다.
 
-	mode = GO_BACK_N; // 0-STOP_AND_WAIT, 1-GO_BACK_N, 2-SELECTIVE_REJECT
+	mode = STOP_AND_WAIT; // 0-STOP_AND_WAIT, 1-GO_BACK_N, 2-SELECTIVE_REJECT
 	
-	window_size = 3; // 윈도우 사이즈 default값은 3으로 합니다.
+	window_size = 1; // 윈도우 사이즈 default값은 3으로 합니다.
 	temp_str.Format(_T("%d"), window_size);
 	m_windowSize.SetWindowTextW(temp_str);
 
@@ -1188,7 +1188,7 @@ void CUDPClient_thdDlg::OnBnClickedButton1() // 적용버튼이 눌리면,
 }
 
 
-void CUDPClient_thdDlg::OnBnClickedOpen()
+/*void CUDPClient_thdDlg::OnBnClickedOpen() //파일전송 구현
 {
 
 	//CFile file((L"C:\test.txt"), CFile::modeWrite);
@@ -1219,19 +1219,19 @@ void CUDPClient_thdDlg::OnBnClickedOpen()
 		// 파일을 전송하기 전에 파일이름을 클라이언트에게 알려줘야 한다. 
 		// 그래야 클라이언트는 전송받은 파일을 이름을 바꾸지 않고 정확히 쓸 것이다.
 		int nNameLen = strFileName.GetLength(); // 파일이름의 길이를 저장한다.
-
+		*/
 		/*std::wcout << nNameLen << endl;
 		std::wcout << strFileName << endl;
 */
 		// 데이터를 위한 임시 버퍼을 잡자.
-		char * data = new char[sourceFile.GetLength()];
-		DWORD dwRead;
+		//char * data = new char[sourceFile.GetLength()];
+		//DWORD dwRead;
 		// 파일을 읽고 소켓으로 전송하자.
 		
-		CString file_content;
+		//CString file_content;
 		//sourceFile.Read(&file_content, sourceFile.GetLength());
-		do
-		{
+		//do
+		/*{
 		dwRead = sourceFile.Read(data, 4096);
 		file_content += data;
 		Packet newPacket = Packet();
@@ -1245,7 +1245,7 @@ void CUDPClient_thdDlg::OnBnClickedOpen()
 		//ar>> (file_content);
 		//std::cout << file_content.GetLength();
 		//packetSegmentation(file_content);
-
+		*/
 		
 		/* 위의 코드는 파일의 길이를 4k 바이트씩 잘라서 전송합니다. 소켓의 디폴트 버퍼크
 		기는 8k이지만, 파일의 전체를 한번에 읽어서 전송하면, 8k가 초과되는 용량에 대해서
@@ -1259,7 +1259,7 @@ void CUDPClient_thdDlg::OnBnClickedOpen()
 		도 됩니다. */
 
 		// 메모리를 해제하고 파일핸들을 닫는다
-		delete data;
-		sourceFile.Close();
-	}
-}
+		//delete data;
+		//sourceFile.Close();
+	//}
+//}

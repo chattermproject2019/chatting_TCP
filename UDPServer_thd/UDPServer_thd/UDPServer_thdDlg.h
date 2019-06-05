@@ -109,5 +109,5 @@ public:
 
 	CArray<int> error_buffer; // Selective Reject용 에러버퍼, 에러가 난 frame seq를 저장합니다.
 	BOOL timer_id_checker[1000] = { 0, };
-	afx_msg void OnBnClickedOpen();
+	//afx_msg void OnBnClickedOpen();
 };
